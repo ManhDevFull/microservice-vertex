@@ -46,5 +46,10 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       return _repo.DeleteCategoryAsync(categoryId);
     }
+    
+        public async Task<List<V_CategoryDTO>> getAllCategory()
+        {
+            return await _repo.getAllCategory();
+        }
   }
 }

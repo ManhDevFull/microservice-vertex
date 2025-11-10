@@ -1,31 +1,22 @@
 using be_dotnet_ecommerce1.Service.IService;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MyApp.Namespace
+namespace be_dotnet_ecommerce1.Controllers
 {
-  [Route("[controller]")]
-  [ApiController]
-  public class CategoryController : ControllerBase
-  {
-    private readonly ICategoryService _service;
-    public CategoryController(ICategoryService service)
+    [ApiController]
+    [Route("[controller]")]
+    public class CategoryController : ControllerBase
     {
-      _service = service;
+        private readonly ICategoryService _service;
+        public CategoryController(ICategoryService service)
+        {
+            _service = service;
+        }
+        [HttpGet]
+        public async Task<IActionResult> getAllCategory()
+        {
+            var rs = await _service.getAllCategory();
+            return Ok(rs);
+        }
     }
-    [HttpGet("parent/{id?}")]
-    public IActionResult CategoryParent(int? id)
-    {
-      var list = _service.getCategoryParentById(id);
-      return Ok(list);
-    }
-    // [HttpGet("/admin/category")]
-    // [Authorize(Roles = "0")]
-    // public IActionResult CategoryParentAdmin(int? id)
-    // {
-    //   var list = _service.getCategoryParentById(id);
-    //   return Ok(list);
-    // }
-  }
 }

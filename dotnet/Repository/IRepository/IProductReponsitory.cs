@@ -29,5 +29,8 @@ namespace dotnet.Repository.IRepository
     public Task<ProductAdminDTO?> CreateVariantAsync(int productId, VariantAdminCreateRequest request);
     public Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request);
     public Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId);
+            public int getQuantityByIdCategory(int id);
+        public Task<List<ProductFilterDTO>> getProductBySql(string sql);
+        public Task<int> countProductBySql(string sql);
   }
 }

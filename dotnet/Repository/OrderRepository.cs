@@ -350,5 +350,13 @@ namespace dotnet.Repository
 
       return result;
     }
+          public async Task<int> getQuantityOrderByIdProduct(int id)
+        {
+            var result = await (from v in _connect.variants
+                                join o in _connect.orders on v.id equals o.variantid
+                                where v.productid == id
+                                select o).CountAsync();
+            return result;
+        }
   }
 }

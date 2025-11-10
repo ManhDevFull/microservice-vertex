@@ -23,5 +23,6 @@ namespace dotnet.Repository.IRepository
     Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId);
     Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus);
     Task<OrderAdminSummaryDTO> GetSummaryAsync();
+    public Task<int> getQuantityOrderByIdProduct(int id);
   }
 }
