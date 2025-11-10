@@ -1,7 +1,7 @@
-using be_dotnet_ecommerce1.Model;
+using dotnet.Model;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
-using dotnet.Model;
+using be_dotnet_ecommerce1.Model;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 

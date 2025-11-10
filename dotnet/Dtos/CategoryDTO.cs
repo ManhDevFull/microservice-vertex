@@ -1,4 +1,4 @@
-namespace be_dotnet_ecommerce1.Dtos
+namespace dotnet.Dtos
 {
     public class CategoryDTO
     {
