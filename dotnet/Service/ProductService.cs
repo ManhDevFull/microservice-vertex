@@ -86,9 +86,9 @@ namespace dotnet.Service
       fetch next  {dTO.pageSize} rows only"; // rowns only
 
       // thực thi sql
-      var totalCount = await _repoProduct.countProductBySql(sqlcountProduct); // đếm số lương sản phẩm
+      var totalCount = await _repo.countProductBySql(sqlcountProduct); // đếm số lương sản phẩm
       
-      var products = await _repoProduct.getProductBySql(sqlData); // lấy sản phẩm bằng sql
+      var products = await _repo.getProductBySql(sqlData); // lấy sản phẩm bằng sql
 
       // nếu không có sản phẩm nào
       if (totalCount == 0 || !products.Any())

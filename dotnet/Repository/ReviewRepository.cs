@@ -19,7 +19,7 @@ namespace dotnet.Repository
       _connect = connect;
     }
 
-    public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
+public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
         int page,
         int size,
         int? rating,
@@ -37,8 +37,9 @@ namespace dotnet.Repository
           .Include(r => r.order)
             .ThenInclude(o => o.account)
           .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
+            .ThenInclude(o => o.orderdetails)
+              .ThenInclude(od => od.variant!)
+                .ThenInclude(v => v.product)
           .AsQueryable();
 
       if (rating.HasValue)
@@ -69,9 +70,9 @@ namespace dotnet.Repository
         var pattern = $"%{trimmed}%";
         query = query.Where(r =>
             EF.Functions.ILike(r.content ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.account.firstname + " " + r.order.account.lastname, pattern) ||
+            EF.Functions.ILike(r.order!.account.firstname + " " + r.order.account.lastname, pattern) ||
             EF.Functions.ILike(r.order.account.email ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.variant.product.nameproduct ?? string.Empty, pattern));
+            r.order.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? string.Empty, pattern)));
       }
 
       var total = await query.CountAsync();
@@ -93,15 +94,16 @@ namespace dotnet.Repository
       };
     }
 
-    public async Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId)
+public async Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId)
     {
       var review = await _connect.reviews
           .AsNoTracking()
           .Include(r => r.order)
             .ThenInclude(o => o.account)
           .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
+            .ThenInclude(o => o.orderdetails)
+              .ThenInclude(od => od.variant!)
+                .ThenInclude(v => v.product)
           .FirstOrDefaultAsync(r => r.id == reviewId);
 
       return review == null ? null : MapToDto(review);
@@ -140,7 +142,8 @@ namespace dotnet.Repository
     {
       var order = review.order;
       var account = order?.account;
-      var variant = order?.variant;
+      var primaryDetail = order?.orderdetails?.FirstOrDefault();
+      var variant = primaryDetail?.variant;
       var product = variant?.product;
 
       return new ReviewAdminDTO
@@ -160,7 +163,6 @@ namespace dotnet.Repository
         VariantAttributes = ExtractAttributes(variant?.valuevariant)
       };
     }
-
     private static Dictionary<string, string> ExtractAttributes(JsonDocument? document)
     {
       var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

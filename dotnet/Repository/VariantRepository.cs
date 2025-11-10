@@ -1,6 +1,8 @@
+using System.Text.Json;
 using be_dotnet_ecommerce1.Controllers;
 using be_dotnet_ecommerce1.Data;
 using be_dotnet_ecommerce1.Dtos;
+using be_dotnet_ecommerce1.Model;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
 
@@ -84,8 +86,8 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
     public async Task<Variant[]> GetVariantByIdProduct(int id)
         {
             var result = await _connect.variants
-                .Include(p => p.Product)
-                .Where(p => p.Product != null && p.Product.id == id)
+                .Include(p => p.product)
+                .Where(p => p.product != null && p.product.id == id)
                 .ToArrayAsync();
             return result;
         }

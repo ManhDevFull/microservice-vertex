@@ -1,9 +1,10 @@
-using dotnet.Model;
-using dotnet.Dtos;
-using dotnet.Dtos.admin;
+using System.Reflection.Emit;
 using be_dotnet_ecommerce1.Model;
+using dotnet.Dtos.admin;
+using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using be_dotnet_ecommerce1.Dtos;
 
 namespace be_dotnet_ecommerce1.Data
 {
@@ -74,6 +75,8 @@ GROUP BY
     public DbSet<Discount> discounts { get; set; } = null!;
     public DbSet<DiscountProduct> discountProducts { get; set; } = null!;
     public DbSet<Order> orders { get; set; } = null!;
+
+    public DbSet<OrderDetail> orderdetails { get; set; } = null!;
     public DbSet<Product> products { get; set; } = null!;
     public DbSet<Review> reviews { get; set; } = null!;
     public DbSet<ShoppingCart> shoppingCarts { get; set; } = null!;
@@ -84,7 +87,6 @@ GROUP BY
     // DTO / Views
     public DbSet<CategoryAdminDTO> categoryAdmins { get; set; } = null!;
     public DbSet<UserAdminDTO> userAdmins { get; set; } = null!;
-    public DbSet<UserDTO> userDtos { get; set; } = null!;
     public DbSet<ProductAdminDTO> productAdmins { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -106,28 +108,6 @@ GROUP BY
         e.Property(x => x.isdeleted).HasColumnName("isdeleted");
         e.Property(x => x.refreshtoken).HasColumnName("refreshtoken");
         e.Property(x => x.refreshtokenexpires).HasColumnName("refreshtokenexpires");
-      });
-
-      modelBuilder.Entity<UserDTO>(e =>
-      {
-        e.HasNoKey();
-        e.ToSqlQuery(@"
-          SELECT
-            0 AS id,
-            '' AS name,
-            '' AS email,
-            0 AS role,
-            '' AS avatarimg,
-            '' AS tel,
-            0 AS orders
-          WHERE 1 = 0");
-        e.Property(x => x.id).HasColumnName("id");
-        e.Property(x => x.name).HasColumnName("name");
-        e.Property(x => x.email).HasColumnName("email");
-        e.Property(x => x.role).HasColumnName("role");
-        e.Property(x => x.avatarImg).HasColumnName("avatarimg");
-        e.Property(x => x.tel).HasColumnName("tel");
-        e.Property(x => x.orders).HasColumnName("orders");
       });
       // -------- email_verification --------
       modelBuilder.Entity<EmailVerification>(e =>
@@ -244,23 +224,17 @@ GROUP BY
         e.ToTable("orders");
         e.HasKey(x => x.id);
         e.Property(x => x.accountid).HasColumnName("account_id");
-        e.Property(x => x.variantid).HasColumnName("variant_id");
         e.Property(x => x.addressid).HasColumnName("address_id");
-        e.Property(x => x.quantity).HasColumnName("quantity");
         e.Property(x => x.orderdate).HasColumnName("orderdate");
         e.Property(x => x.statusorder).HasColumnName("statusorder");
         e.Property(x => x.receivedate).HasColumnName("receivedate");
         e.Property(x => x.typepay).HasColumnName("typepay");
         e.Property(x => x.statuspay).HasColumnName("statuspay");
-
         e.HasOne(x => x.account).WithMany(a => a.orders)
          .HasForeignKey(x => x.accountid).OnDelete(DeleteBehavior.Restrict);
 
         e.HasOne(x => x.address).WithMany(a => a.orders)
          .HasForeignKey(x => x.addressid).OnDelete(DeleteBehavior.Restrict);
-
-        e.HasOne(x => x.variant).WithMany(v => v.orders)
-         .HasForeignKey(x => x.variantid).OnDelete(DeleteBehavior.Restrict);
       });
 
       // -------- product --------
@@ -339,13 +313,29 @@ GROUP BY
         e.Property(x => x.createdate).HasColumnName("createdate");
         e.Property(x => x.updatedate).HasColumnName("updatedate");
         e.Property(x => x.isdeleted).HasColumnName("isdeleted");
-
         e.HasOne(x => x.product)
          .WithMany(p => p.variants)
          .HasForeignKey(x => x.productid)
          .OnDelete(DeleteBehavior.Restrict);
       });
 
+      //--------------orderDetail--------------
+      modelBuilder.Entity<OrderDetail>(e =>
+            {
+                e.ToTable("orderdetail"); 
+                e.HasKey(x => x.id); 
+                e.Property(x => x.idorder).HasColumnName("order_id");
+                e.Property(x => x.idvariant).HasColumnName("variant_id");
+                e.Property(x => x.quantity).HasColumnName("quantity");
+                e.HasOne(d => d.order)
+                    .WithMany(p => p.orderdetails) 
+                    .HasForeignKey(d => d.idorder)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(d => d.variant)
+                    .WithMany(p => p.orderdetails)
+                    .HasForeignKey(d => d.idvariant)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
       // -------- wishlist --------
       modelBuilder.Entity<WishList>(e =>
       {
@@ -382,9 +372,25 @@ GROUP BY
         e.Property(x => x.min_price).HasColumnName("min_price");
         e.Property(x => x.max_price).HasColumnName("max_price");
       });
-
+           // view v_product_filter
+      modelBuilder.Entity<V_ProductFilter>(entity =>
+      {
+        entity.HasNoKey();
+        entity.ToView("v_products_filter");
+      });
+      // view V_variant
+      modelBuilder.Entity<V_variant>(entity =>
+      {
+        entity.HasNoKey();
+        entity.ToView("v_variantbycategory");
+      });
+      // view v_category
+      modelBuilder.Entity<V_Category>(entity =>
+      {
+        entity.HasNoKey();
+        entity.ToView("v_variant_filters");
+      });
       base.OnModelCreating(modelBuilder);
     }
-
   }
 }
