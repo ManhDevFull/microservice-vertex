@@ -372,6 +372,33 @@ namespace dotnet.Repository
       await _connect.SaveChangesAsync();
       return await GetProductAdminByIdAsync(productId);
     }
+    public async Task<int> countProductBySql(string sql)
+        {
+            var count = await _connect.Database.SqlQueryRaw<int>(sql).SingleAsync();
+            return count;
+        }
+    public async Task<List<ProductFilterDTO>> getProductBySql(string sql)
+        {
+            var rawData = await _connect.Set<V_ProductFilter>()
+            .FromSqlRaw(sql)
+            .ToListAsync();
+            var rs = rawData.Select(r => new ProductFilterDTO
+            {
+                id = r.id,
+                name = r.name,
+                description = r.description,
+                brand = r.brand,
+                categoryId = r.categoryId,
+                categoryName = r.categoryName,
+                imgUrls = r.imgUrls,
+                variant = string.IsNullOrEmpty(r.variant) 
+            ? null 
+            : JsonSerializer.Deserialize<List<VariantDTO>>(r.variant),
 
+                rating = r.rating,
+                order = r.order
+            }).ToList();
+            return rs;
+        }
   }
 }

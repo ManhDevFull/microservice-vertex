@@ -18,5 +18,7 @@ namespace dotnet.Repository.IRepository
     Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId);
     Task<ReviewAdminSummaryDTO> GetSummaryAsync();
     Task<bool> UpdateReviewAsync(int reviewId, bool isUpdated);
+            public Task<Dictionary<int, int >> getSumRatingByIdsProduct(List<int> ids);
+        public Task<Dictionary<int, int>> getSumQuantityReviewByIdProduct(List<int> ids);
   }
 }
