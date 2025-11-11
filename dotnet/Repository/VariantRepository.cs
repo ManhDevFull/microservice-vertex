@@ -3,6 +3,8 @@ using be_dotnet_ecommerce1.Data;
 using be_dotnet_ecommerce1.Dtos;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System.Text;
 
 namespace be_dotnet_ecommerce1.Repository.IRepository
 {
@@ -52,29 +54,93 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
 
             return data;
         }
-        public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO) // done
+        public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO)
         {
-            var sql = "select * from variant";
-            var conditions = new List<string>();
+            var sql = new StringBuilder(@"
+SELECT v.*
+FROM variant v
+JOIN product p ON p.id = v.product_id
+WHERE NOT v.isdeleted
+  AND NOT p.isdeleted");
+            var parameters = new List<NpgsqlParameter>();
+            var paramIndex = 0;
+
             if (dTO.Filter != null)
             {
-                foreach (var item in dTO.Filter)
+                foreach (var entry in dTO.Filter)
                 {
-                    var key = item.Key;
-                    var value = item.Value;
-                    if (value != null)
+                    var key = entry.Key?.Trim();
+                    var values = entry.Value?
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .ToArray();
+
+                    if (string.IsNullOrWhiteSpace(key) || values == null || values.Length == 0)
                     {
-                        var values = string.Join(",", value.Select(v => $"'{v}'"));
-                        conditions.Add($"valuevariant ->> '{key}' IN ({values})");
+                        continue;
                     }
+
+                    if (key.Equals("price", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var priceValues = values
+                            .Select(v => int.TryParse(v.Trim(), out var parsed) ? parsed : (int?)null)
+                            .Where(v => v.HasValue)
+                            .Select(v => v!.Value)
+                            .Distinct()
+                            .ToArray();
+
+                        if (priceValues.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        var placeholders = new List<string>();
+                        foreach (var price in priceValues)
+                        {
+                            var paramName = $"p{paramIndex++}";
+                            parameters.Add(new NpgsqlParameter(paramName, price));
+                            placeholders.Add($"@{paramName}");
+                        }
+
+                        sql.Append($" AND v.price IN ({string.Join(", ", placeholders)})");
+                        continue;
+                    }
+
+                    var allowedValues = values
+                        .Select(v => v.Trim())
+                        .Where(v => v.Length > 0)
+                        .Distinct()
+                        .ToArray();
+
+                    if (allowedValues.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var valuePlaceholders = new List<string>();
+                    foreach (var value in allowedValues)
+                    {
+                        var paramName = $"p{paramIndex++}";
+                        parameters.Add(new NpgsqlParameter(paramName, value));
+                        valuePlaceholders.Add($"@{paramName}");
+                    }
+
+                    var escapedKey = key.Replace("'", "''");
+                    sql.Append($" AND (v.valuevariant ->> '{escapedKey}') IN ({string.Join(", ", valuePlaceholders)})");
                 }
             }
-            if (conditions.Count > 0)
-            {
-                sql += " where " + string.Join(" AND ", conditions);
-                Console.Write(sql);
-            }
-            var result = await _connect.variants.FromSqlRaw(sql).ToListAsync();
+
+            var parameterArray = parameters.Count > 0
+                ? parameters.Cast<object>().ToArray()
+                : Array.Empty<object>();
+
+            var query = parameters.Count > 0
+                ? _connect.variants.FromSqlRaw(sql.ToString(), parameterArray)
+                : _connect.variants.FromSqlRaw(sql.ToString());
+
+            var result = await query
+                .AsNoTracking()
+                .ToListAsync();
+
             return result;
         }
 

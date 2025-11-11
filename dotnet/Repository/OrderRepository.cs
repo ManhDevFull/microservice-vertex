@@ -1,18 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using be_dotnet_ecommerce1.Data;
-using dotnet.Dtos;
-using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using be_dotnet_ecommerce1.Data;
+using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Repository.IRepository;
-
-// (Đảm bảo đã thêm 2 using này)
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace dotnet.Repository
 {
@@ -26,43 +22,38 @@ namespace dotnet.Repository
 
         public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
         {
-            // Câu SQL của bạn (giữ nguyên)
             var sql = @"
                 SELECT
                     o.id AS ""OrderId"",
                     o.orderdate AS ""OrderDate"",
                     o.statusorder AS ""StatusOrder"",
-                    o.quantity * (
-                        CASE
-                            WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
-                            WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
-                            ELSE v.price
-                        END
+                    SUM(
+                        od.quantity * (
+                            CASE
+                                WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
+                                WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
+                                ELSE v.price
+                            END
+                        )
                     ) AS ""TotalPriceAfterDiscount""
                 FROM orders o
-                JOIN variant v ON o.variant_id = v.id
+                JOIN orderdetail od ON od.order_id = o.id
+                JOIN variant v ON od.variant_id = v.id
                 JOIN product p ON v.product_id = p.id
                 LEFT JOIN discount_product dp ON v.id = dp.variant_id
                 LEFT JOIN discount d ON dp.discount_id = d.id
                     AND o.orderdate BETWEEN d.starttime AND d.endtime
                 WHERE o.account_id = @accountId
+                GROUP BY o.id, o.orderdate, o.statusorder
                 ORDER BY o.id DESC;
             ";
 
             var accountIdParam = new NpgsqlParameter("@accountId", accountId);
 
-            // === SỬA LẠI DÒNG NÀY ===
-            // Thay _connect.Set<OrderHistoryDTO>().FromSqlRaw(...)
             var orders = await _connect.Database
-                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam) // Dùng SqlQueryRaw
+                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
                                    .AsNoTracking()
                                    .ToListAsync();
-            // ======================
-            foreach (var o in orders)
-            {
-                Console.WriteLine($"ID={o.OrderId}, Price={o.TotalPriceAfterDiscount}");
-            }
-
 
             return orders;
         }
@@ -86,8 +77,6 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(o => o.account)
           .Include(o => o.address)
-          .Include(o => o.variant)
-            .ThenInclude(v => v.product)
           .AsQueryable();
 
       if (!string.IsNullOrWhiteSpace(status))
@@ -131,7 +120,7 @@ namespace dotnet.Repository
               o.id == orderId ||
               EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
               EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              EF.Functions.ILike(o.variant.product.nameproduct ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
               EF.Functions.ILike(o.statusorder ?? "", pattern) ||
               EF.Functions.ILike(o.statuspay ?? "", pattern));
         }
@@ -140,7 +129,7 @@ namespace dotnet.Repository
           query = query.Where(o =>
               EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
               EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              EF.Functions.ILike(o.variant.product.nameproduct ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
               EF.Functions.ILike(o.statusorder ?? "", pattern) ||
               EF.Functions.ILike(o.statuspay ?? "", pattern));
         }
@@ -154,7 +143,16 @@ namespace dotnet.Repository
           .Take(size)
           .ToListAsync();
 
-      var items = orders.Select(MapToDto).ToList();
+      var orderIds = orders.Select(o => o.id).ToList();
+      var detailLookup = await LoadOrderLineLookupAsync(orderIds);
+
+      var items = orders
+        .Select(order =>
+        {
+          detailLookup.TryGetValue(order.id, out var detail);
+          return MapToDto(order, detail);
+        })
+        .ToList();
 
       return new PagedResult<OrderAdminDTO>
       {
@@ -171,11 +169,14 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(o => o.account)
           .Include(o => o.address)
-          .Include(o => o.variant)
-            .ThenInclude(v => v.product)
           .FirstOrDefaultAsync(o => o.id == orderId);
 
-      return order == null ? null : MapToDto(order);
+      if (order == null) return null;
+
+      var lookup = await LoadOrderLineLookupAsync(new[] { orderId });
+      lookup.TryGetValue(orderId, out var detail);
+
+      return MapToDto(order, detail);
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus)
@@ -256,30 +257,34 @@ namespace dotnet.Repository
         }
       }
 
-      var deliveredRevenue = await (from o in _connect.orders.AsNoTracking()
-                                    join v in _connect.variants.AsNoTracking()
-                                      on o.variantid equals v.id
-                                    where o.statusorder == "DELIVERED"
-                                    select new { o.quantity, v.price })
-                                    .ToListAsync();
-
-      summary.Revenue = deliveredRevenue.Sum(item => (long)item.quantity * item.price);
+      summary.Revenue = await (from o in _connect.orders.AsNoTracking()
+                               join od in _connect.orderdetails.AsNoTracking() on o.id equals od.order_id
+                               join v in _connect.variants.AsNoTracking() on od.variant_id equals v.id
+                               where o.statusorder == "DELIVERED"
+                               select (long)od.quantity * v.price)
+                               .SumAsync();
 
       return summary;
     }
 
-    private static OrderAdminDTO MapToDto(dotnet.Model.Order order)
+    private static OrderAdminDTO MapToDto(dotnet.Model.Order order, dotnet.Model.OrderDetail? primaryDetail)
     {
-      var variant = order.variant;
+      var variant = primaryDetail?.variant;
       var product = variant?.product;
       var account = order.account;
       var address = order.address;
+      var resolvedVariantId = primaryDetail?.variant_id ?? 0;
+      var quantity = primaryDetail?.quantity ?? 0;
+      if (quantity == 0) quantity = 1;
+
+      var unitPrice = variant?.price ?? 0;
+      var totalPrice = unitPrice * quantity;
 
       return new OrderAdminDTO
       {
         Id = order.id,
         AccountId = order.accountid,
-        VariantId = order.variantid,
+        VariantId = resolvedVariantId,
         CustomerName = $"{(account?.firstname ?? "").Trim()} {(account?.lastname ?? "").Trim()}".Trim(),
         CustomerEmail = account?.email ?? string.Empty,
         CustomerPhone = address?.tel ?? string.Empty,
@@ -287,15 +292,33 @@ namespace dotnet.Repository
         ProductName = product?.nameproduct ?? string.Empty,
         ProductImage = product?.imageurls?.FirstOrDefault() ?? string.Empty,
         VariantAttributes = ExtractAttributes(variant?.valuevariant),
-        Quantity = order.quantity,
-        UnitPrice = variant?.price ?? 0,
-        TotalPrice = (variant?.price ?? 0) * order.quantity,
+        Quantity = quantity,
+        UnitPrice = unitPrice,
+        TotalPrice = totalPrice,
         StatusOrder = order.statusorder ?? string.Empty,
         StatusPay = order.statuspay ?? string.Empty,
         TypePay = order.typepay ?? string.Empty,
         OrderDate = order.orderdate,
         ReceiveDate = order.receivedate
       };
+    }
+
+    private async Task<Dictionary<int, dotnet.Model.OrderDetail>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, dotnet.Model.OrderDetail>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.First());
     }
 
     private static string BuildAddress(dotnet.Model.Address? address)
