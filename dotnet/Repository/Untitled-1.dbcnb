@@ -1,0 +1,588 @@
+cells:
+  - kind: 2
+    languageId: sql
+    value: "select DISTINCT jsonb_object_keys(valuevariant) FROM\r
+
+      category JOIN product ON (category.id = product.id)\r
+
+      JOIN variant on (product.id = category.id)\r
+
+      AND category.id = 3\r
+
+      \r
+
+      \r
+
+      SELECT * from variant\r
+
+      \r
+
+      SELECT DISTINCT typediscount, discount, starttime, endtime from \r
+
+      product JOIN variant on(product.id = variant.product_id)\r
+
+      JOIN discount_product on (variant.id = discount_product.variant_id)\r
+
+      JOIN discount on(discount.id = discount_product.discount_id)\r
+
+      where product.id = 1\r
+
+      select * from discount\r
+
+      \r
+
+      select * from variant\r
+
+      \r
+
+      \r
+
+      SELECT key, array_agg(DISTINCT value) AS values\r
+
+      FROM category JOIN product ON (category.id = product.id)\r
+
+      JOIN variant on (product.id = variant.id)\r
+
+      AND category.id = 3 ,\r
+
+      \     jsonb_each_text(valuevariant)\r
+
+      GROUP BY key;\r
+
+      ----------------------------------\r
+
+      SELECT \r
+
+      \    key, \r
+
+      \    array_agg(DISTINCT value) AS values\r
+
+      FROM category \r
+
+      JOIN product ON category.id = product.category\r
+
+      JOIN variant ON product.id = variant.product_id\r
+
+      CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant) AS kv(key,
+      value)\r
+
+      WHERE category.id = 1\r
+
+      GROUP BY key;\r
+
+      ----------------------\r
+
+      select * FROM\r
+
+      product JOIN variant ON (product.id = variant.product_id)\r
+
+      WHERE product.id in (\r
+
+      \     SELECT variant.product_id FROM variant WHERE\r
+
+      \     valueVariant.\r
+
+      )\r
+
+      \r
+
+      \   SELECT x.key, array_agg(DISTINCT x.value) AS values\r
+
+      \                FROM product\r
+
+      \                JOIN variant  v (product.id = variant.product_id)\r
+
+      \                CROSS JOIN LATERAL jsonb_each_text(v.valuevariant) AS
+      x(key, value)\r
+
+      \                WHERE  = 1\r
+
+      \                GROUP BY x.key;\r
+
+      \r
+
+      SELECT p.*, v.valuevariant\r
+
+      FROM product p\r
+
+      JOIN variant v ON p.id = v.id\r
+
+      WHERE \r
+
+      \ JSON_VALUE(v.valueVariant, '$.color') IN ('black', 'Blue')\r
+
+      \ or JSON_VALUE(v.valueVariant, '$.ram') IN ('32GB', '16GB')\r
+
+      \r
+
+      \r
+
+      -----------------------------\r
+
+      \ SELECT \r
+
+      \                key, \r
+
+      \                array_agg(DISTINCT value ORDER BY value) AS values\r
+
+      \            FROM (\r
+
+      \                -- Lấy các thuộc tính từ valuevariant\r
+
+      \                SELECT \r
+
+      \                    kv.key::text AS key, \r
+
+      \                    kv.value::text AS value\r
+
+      \                FROM category \r
+
+      \                JOIN product ON category.id = product.category\r
+
+      \                JOIN variant ON product.id = variant.product_id\r
+
+      \                CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant)
+      AS kv(key, value)\r
+
+      \                WHERE category.id = 1\r
+
+      \                AND variant.isdeleted = false\r
+
+      \                AND product.isdeleted = false\r
+
+      \                \r
+
+      \                UNION ALL\r
+
+      \                \r
+
+      \                -- Thêm giá như một thuộc tính\r
+
+      \                SELECT \r
+
+      \                    'price' AS key,\r
+
+      \                    v.price::text AS value\r
+
+      \                FROM category c\r
+
+      \                JOIN product p ON c.id = p.category\r
+
+      \                JOIN variant v ON p.id = v.product_id\r
+
+      \                WHERE c.id = 1\r
+
+      \                AND v.isdeleted = false\r
+
+      \                AND p.isdeleted = false\r
+
+      \            ) AS combined\r
+
+      \            GROUP BY key\r
+
+      \            ORDER BY key\r
+
+      \r
+
+      \r
+
+      \r
+
+      \r
+
+      \ ------------------------\r
+
+      \ SELECT \r
+
+      \                key, \r
+
+      \                array_agg(DISTINCT value ORDER BY value) AS values\r
+
+      \            FROM (\r
+
+      \                -- Lấy các thuộc tính từ valuevariant\r
+
+      \                SELECT \r
+
+      \                    kv.key::text AS key, \r
+
+      \                    kv.value::text AS value\r
+
+      \                FROM category \r
+
+      \                JOIN product ON category.id = product.category\r
+
+      \                JOIN variant ON product.id = variant.product_id\r
+
+      \                CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant)
+      AS kv(key, value)\r
+
+      \                WHERE category.id = 1 \r
+
+      \                AND variant.isdeleted = false\r
+
+      \                AND product.isdeleted = false\r
+
+      \                \r
+
+      \                UNION ALL\r
+
+      \                \r
+
+      \                -- Thêm giá như một thuộc tính\r
+
+      \                SELECT \r
+
+      \                    'price' AS key,\r
+
+      \                    v.price::text AS value\r
+
+      \                FROM category c\r
+
+      \                JOIN product p ON c.id = p.category\r
+
+      \                JOIN variant v ON p.id = v.product_id\r
+
+      \                WHERE c.id = 1\r
+
+      \                AND v.isdeleted = false\r
+
+      \                AND p.isdeleted = false\r
+
+      \            ) AS combined\r
+
+      \            GROUP BY key\r
+
+      \            ORDER BY key\r
+
+      -------------\r
+
+      SELECT \r
+
+      \                key, \r
+
+      \                array_agg(DISTINCT value ORDER BY value) AS values\r
+
+      \            FROM (\r
+
+      \                -- Lấy các thuộc tính từ valuevariant\r
+
+      \                SELECT \r
+
+      \                    kv.key::text AS key, \r
+
+      \                    kv.value::text AS value\r
+
+      \                FROM category \r
+
+      \                JOIN product ON category.id = product.category\r
+
+      \                JOIN variant ON product.id = variant.product_id\r
+
+      \                CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant)
+      AS kv(key, value)\r
+
+      \                WHERE category.id = {0} \r
+
+      \                AND variant.isdeleted = false\r
+
+      \                AND product.isdeleted = false\r
+
+      \                \r
+
+      \                UNION ALL\r
+
+      \                \r
+
+      \                -- Thêm giá như một thuộc tính\r
+
+      \                SELECT \r
+
+      \                    'price' AS key,\r
+
+      \                    v.price::text AS value\r
+
+      \                FROM category c\r
+
+      \                JOIN product p ON c.id = p.category\r
+
+      \                JOIN variant v ON p.id = v.product_id\r
+
+      \                WHERE c.id = {0}\r
+
+      \                AND v.isdeleted = false\r
+
+      \                AND p.isdeleted = false\r
+
+      \            ) AS combined\r
+
+      \            GROUP BY key\r
+
+      \            ORDER BY key;\", id, id)\"\r
+
+      \r
+
+      -------------------------------------------\r
+
+      \r\n"
+    metadata: {}
+  - kind: 2
+    languageId: sql
+    value: ""
+    metadata: {}
+  - kind: 2
+    languageId: sql
+    value: "-------------------------------------------\r
+
+      \    SELECT \r
+
+      \    STRING_AGG(\r
+
+      \        CONCAT(\r
+
+      \            '{',\r
+
+      \            '\"id\":', v.id, ',',\r
+
+      \            '\"valuevariant\":', to_jsonb(v.valuevariant), ',',\r
+
+      \            '\"stock\":', v.stock, ',',\r
+
+      \            '\"inputprice\":', v.inputprice, ',',\r
+
+      \            '\"price\":', v.price, ',',\r
+
+      \            '\"createdate\":\"', to_char(v.createdate, 'YYYY-MM-DD
+      HH24:MI:SS'), '\",',\r
+
+      \            '\"updatedate\":\"', to_char(v.updatedate, 'YYYY-MM-DD
+      HH24:MI:SS'), '\"',\r
+
+      \            '}'\r
+
+      \        ), ','\r
+
+      \    ) AS variantJson\r
+
+      FROM variant v\r
+
+      WHERE v.product_id = 1;\r\n"
+    metadata: {}
+  - kind: 2
+    languageId: sql
+    value: "SELECT * FROM variant WHERE variant ->> 'color' IN ('black')\r
+
+      select * from variant\r
+
+      \r
+
+      \r
+
+      -------------------------------------------------\r
+
+      \ SELECT \r
+
+      \                key, \r
+
+      \                array_agg(DISTINCT value ORDER BY value) AS values\r
+
+      \            FROM (\r
+
+      \                -- Lấy các thuộc tính từ valuevariant\r
+
+      \                SELECT \r
+
+      \                    kv.key::text AS key, \r
+
+      \                    kv.value::text AS value\r
+
+      \                FROM category \r
+
+      \                JOIN product ON category.id = product.category\r
+
+      \                JOIN variant ON product.id = variant.product_id\r
+
+      \                CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant)
+      AS kv(key, value)\r
+
+      \                --WHERE category.id = 1\r
+
+      \                --AND variant.isdeleted = false\r
+
+      \                --AND product.isdeleted = false\r
+
+      \                \r
+
+      \                UNION ALL\r
+
+      \                \r
+
+      \                -- Thêm giá như một thuộc tính\r
+
+      \                SELECT \r
+
+      \                    'price' AS key,\r
+
+      \                    v.price::text AS value\r
+
+      \                FROM category c\r
+
+      \                JOIN product p ON c.id = p.category\r
+
+      \                JOIN variant v ON p.id = v.product_id\r
+
+      \                --WHERE c.id = 1\r
+
+      \                AND v.isdeleted = false\r
+
+      \                AND p.isdeleted = false\r
+
+      \r
+
+      \r
+
+      \                union all\r
+
+      \                --- Thêm thương hiệu\r
+
+      \                SELECT\r
+
+      \                'brand' as Key,\r
+
+      \                p.brand::text As value\r
+
+      \                from product p\r
+
+      \r
+
+      \                union all\r
+
+      \                -- thêm danh mục\r
+
+      \                SELECT\r
+
+      \                    'category' as key,\r
+
+      \                    c.namecategory::text as value\r
+
+      \                from category c\r
+
+      \            ) AS combined\r
+
+      \            GROUP BY key\r
+
+      \            ORDER BY key;\r
+
+      SELECT DISTINCT *  from product JOIN category ON (product.category =
+      category.id) \r
+
+      SELECT * FROM product WHERE  ->> 'brand' = 'Apple';\r
+
+      \r\n"
+    metadata: {}
+  - kind: 2
+    languageId: sql
+    value: "select distinct p.* from product p\r
+
+      \            JOIN category c ON \r
+
+      \            (p.category = c.id)\r
+
+      \            JOIN variant v on (p.id = v.product_id)\r
+
+      \r
+
+      SELECT COUNT(*) \r
+
+      FROM orders o\r
+
+      JOIN variant v ON o.variant_id = v.id\r
+
+      WHERE v.product_id = 1;\r
+
+      \r
+
+      \r
+
+      SELECT  sum(r.rating) from review r\r
+
+      join orders o on (r.order_id = o.id)\r
+
+      join variant v on (v.id = o.variant_id)\r
+
+      WHERE (v.product_id = 1)\r
+
+      \r
+
+      \r
+
+      \r
+
+      select * from review\r
+
+      select * from orders\r
+
+      select * from  variant WHERE product_id = 1\r
+
+      \r
+
+      \r
+
+      SELECT  r.id as idreview, o.id as idorder, \r
+
+      v.product_id as idproduct, r.rating, v.id as idvariant, v.product_id as
+      idporduct from review r\r
+
+      join orders o on (r.order_id = o.id)\r
+
+      join variant v on (v.id = o.variant_id)\r
+
+      WHERE (v.product_id = 2)\r
+
+      \r
+
+      select DISTINCT * from product p join variant ON (p.id =
+      variant.product_id)\r
+
+      WHERE variant.price between 25000 and 30000\r
+
+      \r
+
+      \r
+
+      \r
+
+      SELECT\r
+
+      \    v.product_id,\r
+
+      \    v.valuevariant ->> 'price' AS price_value\r
+
+      FROM\r
+
+      \    variant v\r
+
+      WHERE\r
+
+      \    v.valuevariant ? 'price';\r
+
+      \r
+
+      \r
+
+      \r
+
+      select top 10 * FROM product p\r
+
+      join category c ON (p.category = c.id)\r
+
+      join variant v ON (p.id = v.product_id)\r
+
+      JOIN orders o ON (v.id = orders.variant_id)\r\n"
+    metadata: {}
+metadata:
+  conn:
+    id: iwdSQjg3WX78MtqzkipM3
+    name: Ecommerce1_DB
+  database: ecommerce1
+  schema: public

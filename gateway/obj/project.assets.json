@@ -98,11 +98,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\microservice-vertex\\gateway\\gateway.csproj",
+      "projectUniqueName": "D:\\ecommerce-vertex\\microservice-vertex\\gateway\\gateway.csproj",
       "projectName": "gateway",
-      "projectPath": "D:\\microservice-vertex\\gateway\\gateway.csproj",
+      "projectPath": "D:\\ecommerce-vertex\\microservice-vertex\\gateway\\gateway.csproj",
       "packagesPath": "C:\\Users\\HIEU\\.nuget\\packages\\",
-      "outputPath": "D:\\microservice-vertex\\gateway\\obj\\",
+      "outputPath": "D:\\ecommerce-vertex\\microservice-vertex\\gateway\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

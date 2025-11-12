@@ -262,12 +262,5 @@ namespace be_dotnet_ecommerce1.Repository
         }).ToListAsync();
         return rs;
     }
-    public async Task<List<Category>> getCategoryByProductIds(List<int> ids)
-    {
-        if (ids == null)
-          return new List<Category>();
-        var result = await _connect.categories.Where(c => ids.Contains(c.id)).Distinct().ToListAsync();
-        return result;
-    }
   }
 }

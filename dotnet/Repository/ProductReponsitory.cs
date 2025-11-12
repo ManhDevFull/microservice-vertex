@@ -22,77 +22,7 @@ namespace dotnet.Repository
       _connect = connect;
       variantRepository = new VariantRepository(_connect);
     }
-
-   public async Task<List<ProductFilterDTO>> GetProductByFilter(FilterDTO dTO)
-{
-    try
-    {
-        // Lấy danh sách variant thỏa filter
-        var variants = await variantRepository.GetVariantByFilter(dTO) ?? new List<Variant>();
-        var productIds = variants.Select(v => v.productid).Distinct().ToList();
-
-        // Lấy danh sách sản phẩm có variant thuộc list
-        var products = await _connect.products
-            .Include(p => p.category)
-            .Include(p => p.brand) // thêm include brand
-            .Where(p => productIds.Contains(p.id))
-            .Select(p => new ProductFilterDTO
-            {
-                id = p.id,
-                name = p.nameproduct,
-                description = p.description,
-                // ✅ lấy tên brand
-                brand = p.brand != null ? p.brand.name : string.Empty,
-                categoryId = p.categoryId,
-                categoryName = p.category != null ? p.category.namecategory : null,
-                // ✅ đổi từ string[] sang List<string>
-                imgUrls = p.imageurls != null ? p.imageurls.ToList() : new List<string>(),
-
-                // ✅ map variant
-                variant = _connect.variants
-                    .Where(v => v.productid == p.id)
-                    .Select(v => new VariantDTO
-                    {
-                        id = v.id,
-                        // ✅ convert JSONB -> string
-                        valuevariant = v.valuevariant.RootElement.ToString(),
-                        stock = v.stock,
-                        inputprice = v.inputprice,
-                        price = v.price,
-                        createdate = v.createdate,
-                        updatedate = v.updatedate
-                    }).ToArray(),
-
-                // discount
-                discount = (from dp in _connect.discountProducts
-                            join d in _connect.discounts on dp.discountid equals d.id
-                            join v in _connect.variants on dp.variantid equals v.id
-                            where v.productid == p.id
-                            select d).ToArray(),
-
-                // rating
-                rating = (from r in _connect.reviews
-                          join o in _connect.orders on r.orderid equals o.id
-                          join v in _connect.variants on o.variantid equals v.id
-                          where v.productid == p.id
-                          select (int?)r.rating).Sum() ?? 0,
-
-                // order count
-                order = (from o in _connect.orders
-                         join v in _connect.variants on o.variantid equals v.id
-                         where v.productid == p.id
-                         select o).Count()
-            })
-            .ToListAsync();
-
-        return products ?? new List<ProductFilterDTO>();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine(ex);
-        throw;
-    }
-}
+    // hàm này có thể bỏ
 
 
 
@@ -101,16 +31,14 @@ namespace dotnet.Repository
       var quantity = _connect.products.Count(p => p.categoryId == id);
       return quantity;
     }
-
-
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
-        int page,
-        int size,
-        string? name,
-        int? cate,
-        string? brand,
-        bool? stock,
-        string sort = "newest")
+            int page,
+            int size,
+            string? name,
+            int? cate,
+            string? brand,
+            bool? stock,
+            string sort = "newest")
     {
       page = Math.Max(1, page);
       size = Math.Clamp(size, 1, 100);
@@ -134,13 +62,19 @@ namespace dotnet.Repository
         if (stock.Value)
         {
           q = from p in q
-              where _connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where _connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
         else
         {
           q = from p in q
-              where !_connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where !_connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
       }
@@ -169,6 +103,7 @@ namespace dotnet.Repository
         Size = size
       };
     }
+
 
     private static JsonDocument BuildJsonDocument(Dictionary<string, string> value)
     {
@@ -216,7 +151,7 @@ namespace dotnet.Repository
         {
           var newVariant = new Variant
           {
-            productid = product.id,
+            product_id = product.id,
             valuevariant = BuildJsonDocument(variant.valuevariant),
             stock = variant.stock,
             inputprice = variant.inputprice,
@@ -272,6 +207,54 @@ namespace dotnet.Repository
       return await GetProductAdminByIdAsync(productId);
     }
 
+
+
+    public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
+    {
+      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
+      if (product == null) return null;
+
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
+      if (variant == null) return null;
+
+      var now = DateTime.UtcNow;
+
+      if (request.valuevariant != null)
+        variant.valuevariant = BuildJsonDocument(request.valuevariant);
+
+      if (request.stock.HasValue)
+        variant.stock = request.stock.Value;
+
+      if (request.inputprice.HasValue)
+        variant.inputprice = request.inputprice.Value;
+
+      if (request.price.HasValue)
+        variant.price = request.price.Value;
+
+      variant.updatedate = now;
+      product.updatedate = now;
+
+      await _connect.SaveChangesAsync();
+      return await GetProductAdminByIdAsync(productId);
+    }
+
+    public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
+    {
+      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
+      if (product == null) return null;
+
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
+      if (variant == null) return null;
+
+      var now = DateTime.UtcNow;
+      variant.isdeleted = true;
+      variant.updatedate = now;
+      product.updatedate = now;
+
+      await _connect.SaveChangesAsync();
+      return await GetProductAdminByIdAsync(productId);
+    }
+
     public async Task<bool> DeleteProductAsync(int productId)
     {
       var product = await _connect.products
@@ -311,7 +294,7 @@ namespace dotnet.Repository
       var now = DateTime.UtcNow;
       var variant = new Variant
       {
-        productid = productId,
+        product_id = productId,
         valuevariant = BuildJsonDocument(request.valuevariant),
         stock = request.stock,
         inputprice = request.inputprice,
@@ -326,79 +309,34 @@ namespace dotnet.Repository
       await _connect.SaveChangesAsync();
       return await GetProductAdminByIdAsync(productId);
     }
-
-    public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
-    {
-      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
-      if (product == null) return null;
-
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
-      if (variant == null) return null;
-
-      var now = DateTime.UtcNow;
-
-      if (request.valuevariant != null)
-        variant.valuevariant = BuildJsonDocument(request.valuevariant);
-
-      if (request.stock.HasValue)
-        variant.stock = request.stock.Value;
-
-      if (request.inputprice.HasValue)
-        variant.inputprice = request.inputprice.Value;
-
-      if (request.price.HasValue)
-        variant.price = request.price.Value;
-
-      variant.updatedate = now;
-      product.updatedate = now;
-
-      await _connect.SaveChangesAsync();
-      return await GetProductAdminByIdAsync(productId);
-    }
-
-    public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
-    {
-      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
-      if (product == null) return null;
-
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
-      if (variant == null) return null;
-
-      var now = DateTime.UtcNow;
-      variant.isdeleted = true;
-      variant.updatedate = now;
-      product.updatedate = now;
-
-      await _connect.SaveChangesAsync();
-      return await GetProductAdminByIdAsync(productId);
-    }
+    // Duplicate UpdateVariantAsync and DeleteVariantAsync methods removed — original implementations are retained earlier in the file.
     public async Task<int> countProductBySql(string sql)
-        {
-            var count = await _connect.Database.SqlQueryRaw<int>(sql).SingleAsync();
-            return count;
-        }
+    {
+      var count = await _connect.Database.SqlQueryRaw<int>(sql).SingleAsync();
+      return count;
+    }
     public async Task<List<ProductFilterDTO>> getProductBySql(string sql)
-        {
-            var rawData = await _connect.Set<V_ProductFilter>()
-            .FromSqlRaw(sql)
-            .ToListAsync();
-            var rs = rawData.Select(r => new ProductFilterDTO
-            {
-                id = r.id,
-                name = r.name,
-                description = r.description,
-                brand = r.brand,
-                categoryId = r.categoryId,
-                categoryName = r.categoryName,
-                imgUrls = r.imgUrls,
-                variant = string.IsNullOrEmpty(r.variant) 
-            ? null 
-            : JsonSerializer.Deserialize<List<VariantDTO>>(r.variant),
+    {
+      var rawData = await _connect.Set<V_ProductFilter>()
+      .FromSqlRaw(sql)
+      .ToListAsync();
+      var rs = rawData.Select(r => new ProductFilterDTO
+      {
+        id = r.id,
+        name = r.name,
+        description = r.description,
+        brand = r.brand,
+        categoryId = r.categoryId,
+        categoryName = r.categoryName,
+        imgUrls = r.imgUrls,
+        variant = string.IsNullOrEmpty(r.variant)
+      ? null
+      : JsonSerializer.Deserialize<List<VariantDTO>>(r.variant),
 
-                rating = r.rating,
-                order = r.order
-            }).ToList();
-            return rs;
-        }
+        rating = r.rating,
+        order = r.order
+      }).ToList();
+      return rs;
+    }
   }
 }

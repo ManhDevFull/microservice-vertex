@@ -15,18 +15,18 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
         {
             _connect = connect;
         }
-           public async Task<List<V_VariantFilterDTO>> getAllVariant() // lấy ra tất cả các variant từ view from v_variant_filters
+        public async Task<List<V_VariantFilterDTO>> getAllVariant() // lấy ra tất cả các variant từ view from v_variant_filters
         {
             var data = await _connect.Database.SqlQueryRaw<V_VariantFilterDTO>(@"SELECT * from v_variant_filters")
             .ToListAsync();
             return data;
         }
-     public async Task<List<VariantFilterDTO>> GetValueVariant()
+        public async Task<List<VariantFilterDTO>> GetValueVariant()
         {
             var data = await _connect.Database.SqlQueryRaw<VariantFilterDTO>(@"SELECT * from v_variant_filters").ToListAsync();
             return data;
         }
- public async Task<List<VariantFilterDTO>> GetValueVariantByNameCategory(string? name)
+        public async Task<List<VariantFilterDTO>> GetValueVariantByNameCategory(string? name)
         {
             // Bắt đầu một IQueryable, chưa thực thi
             var query = _connect.Set<V_variant>().AsQueryable();
@@ -55,7 +55,7 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
             return rs;
         }
 
-      public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO) // done
+        public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO) // done
         {
             var sql = "select * from variant";
             var conditions = new List<string>();
@@ -83,7 +83,7 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
             var result = await _connect.variants.FromSqlRaw(sql).ToListAsync();
             return result;
         }
-    public async Task<Variant[]> GetVariantByIdProduct(int id)
+        public async Task<Variant[]> GetVariantByIdProduct(int id)
         {
             var result = await _connect.variants
                 .Include(p => p.product)
@@ -91,12 +91,13 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
                 .ToArrayAsync();
             return result;
         }
-     public async Task<Variant[]> getVariantByIdProducts(List<int> ids) // lấy danh sách variant by list product ids
+        public async Task<Variant[]> getVariantByIdProducts(List<int> ids) // lấy danh sách variant by list product ids
         {
-            if (ids == null)
-                return new Variant[0];
-            var rs = await _connect.variants.Where(v => ids.Contains(v.productid)).Distinct().ToArrayAsync();
-            return rs;
+            // if (ids == null)
+            //     return new Variant[0];
+            // var rs = await _connect.variants.Where(v => ids.Contains(v.productid)).Distinct().ToArrayAsync();
+            // return rs;
+            return null;
         }
     }
 }

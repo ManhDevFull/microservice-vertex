@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "OC4+e4eNG5M=",
+  "dgSpecHash": "cdUdTg8ZcrE=",
   "success": true,
-  "projectFilePath": "D:\\microservice-vertex\\chat\\chat.csproj",
+  "projectFilePath": "D:\\ecommerce-vertex\\microservice-vertex\\chat\\chat.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\HIEU\\.nuget\\packages\\google.protobuf\\3.27.1\\google.protobuf.3.27.1.nupkg.sha512",
     "C:\\Users\\HIEU\\.nuget\\packages\\grpc.aspnetcore\\2.63.0\\grpc.aspnetcore.2.63.0.nupkg.sha512",

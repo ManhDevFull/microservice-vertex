@@ -305,7 +305,7 @@ GROUP BY
       {
         e.ToTable("variant");
         e.HasKey(x => x.id);
-        e.Property(x => x.productid).HasColumnName("product_id");
+        e.Property(x => x.product_id).HasColumnName("product_id");
         e.Property(x => x.valuevariant).HasColumnName("valuevariant").HasColumnType("jsonb");
         e.Property(x => x.stock).HasColumnName("stock");
         e.Property(x => x.inputprice).HasColumnName("inputprice");
@@ -315,25 +315,27 @@ GROUP BY
         e.Property(x => x.isdeleted).HasColumnName("isdeleted");
         e.HasOne(x => x.product)
          .WithMany(p => p.variants)
-         .HasForeignKey(x => x.productid)
+         .HasForeignKey(x => x.product_id)
          .OnDelete(DeleteBehavior.Restrict);
       });
 
-      //--------------orderDetail--------------
-      modelBuilder.Entity<OrderDetail>(e =>
+    // -------- orderdetail --------
+            modelBuilder.Entity<OrderDetail>(e =>
             {
-                e.ToTable("orderdetail"); 
-                e.HasKey(x => x.id); 
-                e.Property(x => x.idorder).HasColumnName("order_id");
-                e.Property(x => x.idvariant).HasColumnName("variant_id");
+                e.ToTable("orderdetail");
+                e.HasKey(x => x.id);
+                e.Property(x => x.order_id).HasColumnName("order_id");
+                e.Property(x => x.variant_id).HasColumnName("variant_id");
                 e.Property(x => x.quantity).HasColumnName("quantity");
+
                 e.HasOne(d => d.order)
-                    .WithMany(p => p.orderdetails) 
-                    .HasForeignKey(d => d.idorder)
+                    .WithMany(p => p.orderdetails)
+                    .HasForeignKey(d => d.order_id)
                     .OnDelete(DeleteBehavior.Restrict);
+
                 e.HasOne(d => d.variant)
                     .WithMany(p => p.orderdetails)
-                    .HasForeignKey(d => d.idvariant)
+                    .HasForeignKey(d => d.variant_id)
                     .OnDelete(DeleteBehavior.Restrict);
             });
       // -------- wishlist --------
