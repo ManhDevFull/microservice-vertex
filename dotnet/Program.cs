@@ -150,6 +150,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowNext", policy =>
     {
         policy.WithOrigins(
+            "http://localhost:5200",
             "http://localhost:3000",
             "http://localhost:5296",
             "https://vertex-ecom.vercel.app")

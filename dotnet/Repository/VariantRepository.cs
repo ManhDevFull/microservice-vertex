@@ -5,6 +5,8 @@ using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System.Text;
 
 namespace be_dotnet_ecommerce1.Repository.IRepository
 {
@@ -64,7 +66,7 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
 
             if (dTO.Filter != null)
             {
-                foreach (var item in dTO.Filter)
+                foreach (var entry in dTO.Filter)
                 {
                     var key = item.Key;
                     var value = item.Value.ToList();

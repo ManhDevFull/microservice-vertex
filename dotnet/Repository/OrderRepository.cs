@@ -1,18 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using be_dotnet_ecommerce1.Data;
-using dotnet.Dtos;
-using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using be_dotnet_ecommerce1.Data;
+using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Repository.IRepository;
-
-// (Đảm bảo đã thêm 2 using này)
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace dotnet.Repository
 {
@@ -24,51 +20,46 @@ namespace dotnet.Repository
       _connect = connect;
     }
 
-    public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
-    {
-      // Câu SQL của bạn (giữ nguyên)
-      var sql = @"
+        public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
+        {
+            var sql = @"
                 SELECT
                     o.id AS ""OrderId"",
                     o.orderdate AS ""OrderDate"",
                     o.statusorder AS ""StatusOrder"",
-                    o.quantity * (
-                        CASE
-                            WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
-                            WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
-                            ELSE v.price
-                        END
+                    SUM(
+                        od.quantity * (
+                            CASE
+                                WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
+                                WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
+                                ELSE v.price
+                            END
+                        )
                     ) AS ""TotalPriceAfterDiscount""
                 FROM orders o
-                JOIN variant v ON o.variant_id = v.id
+                JOIN orderdetail od ON od.order_id = o.id
+                JOIN variant v ON od.variant_id = v.id
                 JOIN product p ON v.product_id = p.id
                 LEFT JOIN discount_product dp ON v.id = dp.variant_id
                 LEFT JOIN discount d ON dp.discount_id = d.id
                     AND o.orderdate BETWEEN d.starttime AND d.endtime
                 WHERE o.account_id = @accountId
+                GROUP BY o.id, o.orderdate, o.statusorder
                 ORDER BY o.id DESC;
             ";
 
       var accountIdParam = new NpgsqlParameter("@accountId", accountId);
 
-      // === SỬA LẠI DÒNG NÀY ===
-      // Thay _connect.Set<OrderHistoryDTO>().FromSqlRaw(...)
-      var orders = await _connect.Database
-                             .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam) // Dùng SqlQueryRaw
-                             .AsNoTracking()
-                             .ToListAsync();
-      // ======================
-      foreach (var o in orders)
-      {
-        Console.WriteLine($"ID={o.OrderId}, Price={o.TotalPriceAfterDiscount}");
-      }
-
+            var orders = await _connect.Database
+                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
+                                   .AsNoTracking()
+                                   .ToListAsync();
 
       return orders;
     }
 
 
-    public async Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
+      public async Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
         int page,
         int size,
         string? status,
@@ -78,113 +69,114 @@ namespace dotnet.Repository
         DateTime? fromDate,
         DateTime? toDate)
     {
-      // page = Math.Max(1, page);
-      // size = Math.Clamp(size, 1, 100);
-      // var offset = (page - 1) * size;
+      page = Math.Max(1, page);
+      size = Math.Clamp(size, 1, 100);
+      var offset = (page - 1) * size;
 
-      // var query = _connect.orders
-      //     .AsNoTracking()
-      //     .Include(o => o.account)
-      //     .Include(o => o.address)
-      //     .AsQueryable();
+      var query = _connect.orders
+          .AsNoTracking()
+          .Include(o => o.account)
+          .Include(o => o.address)
+          .AsQueryable();
 
-      // if (!string.IsNullOrWhiteSpace(status))
-      // {
-      //   var normalizedStatus = status.Trim().ToUpperInvariant();
-      //   query = query.Where(o => o.statusorder != null && o.statusorder.ToUpper() == normalizedStatus);
-      // }
+      if (!string.IsNullOrWhiteSpace(status))
+      {
+        var normalizedStatus = status.Trim().ToUpperInvariant();
+        query = query.Where(o => o.statusorder != null && o.statusorder.ToUpper() == normalizedStatus);
+      }
 
-      // if (!string.IsNullOrWhiteSpace(payment))
-      // {
-      //   var normalizedPayment = payment.Trim().ToUpperInvariant();
-      //   query = query.Where(o => o.statuspay != null && o.statuspay.ToUpper() == normalizedPayment);
-      // }
+      if (!string.IsNullOrWhiteSpace(payment))
+      {
+        var normalizedPayment = payment.Trim().ToUpperInvariant();
+        query = query.Where(o => o.statuspay != null && o.statuspay.ToUpper() == normalizedPayment);
+      }
 
-      // if (!string.IsNullOrWhiteSpace(payType))
-      // {
-      //   var normalizedPayType = payType.Trim().ToUpperInvariant();
-      //   query = query.Where(o => o.typepay != null && o.typepay.ToUpper() == normalizedPayType);
-      // }
+      if (!string.IsNullOrWhiteSpace(payType))
+      {
+        var normalizedPayType = payType.Trim().ToUpperInvariant();
+        query = query.Where(o => o.typepay != null && o.typepay.ToUpper() == normalizedPayType);
+      }
 
-      // if (fromDate.HasValue)
-      // {
-      //   var from = DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc);
-      //   query = query.Where(r => r.orderdate >= from);
-      // }
+      if (fromDate.HasValue)
+      {
+        var from = DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc);
+        query = query.Where(r => r.orderdate >= from);
+      }
 
-      // if (toDate.HasValue)
-      // {
-      //   var to = DateTime.SpecifyKind(toDate.Value.Date.AddDays(1), DateTimeKind.Utc);
-      //   query = query.Where(r => r.orderdate < to);
-      // }
+      if (toDate.HasValue)
+      {
+        var to = DateTime.SpecifyKind(toDate.Value.Date.AddDays(1), DateTimeKind.Utc);
+        query = query.Where(r => r.orderdate < to);
+      }
 
-      // if (!string.IsNullOrWhiteSpace(keyword))
-      // {
-      //   var trimmed = keyword.Trim();
-      //   var pattern = $"%{trimmed}%";
+      if (!string.IsNullOrWhiteSpace(keyword))
+      {
+        var trimmed = keyword.Trim();
+        var pattern = $"%{trimmed}%";
 
-      //   if (int.TryParse(trimmed, out var orderId))
-      //   {
-      //     query = query.Where(o =>
-      //         o.id == orderId ||
-      //         EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
-      //         EF.Functions.ILike(o.account.email ?? "", pattern) ||
-      //         o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
-      //         EF.Functions.ILike(o.statusorder ?? "", pattern) ||
-      //         EF.Functions.ILike(o.statuspay ?? "", pattern));
-      //   }
-      //   else
-      //   {
-      //     query = query.Where(o =>
-      //         EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
-      //         EF.Functions.ILike(o.account.email ?? "", pattern) ||
-      //         o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
-      //         EF.Functions.ILike(o.statusorder ?? "", pattern) ||
-      //         EF.Functions.ILike(o.statuspay ?? "", pattern));
-      //   }
-      // }
+        if (int.TryParse(trimmed, out var orderId))
+        {
+          query = query.Where(o =>
+              o.id == orderId ||
+              EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
+              EF.Functions.ILike(o.account.email ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
+              EF.Functions.ILike(o.statusorder ?? "", pattern) ||
+              EF.Functions.ILike(o.statuspay ?? "", pattern));
+        }
+        else
+        {
+          query = query.Where(o =>
+              EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
+              EF.Functions.ILike(o.account.email ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
+              EF.Functions.ILike(o.statusorder ?? "", pattern) ||
+              EF.Functions.ILike(o.statuspay ?? "", pattern));
+        }
+      }
 
-      // var total = await query.CountAsync();
+      var total = await query.CountAsync();
 
-      // var orders = await query
-      //     .OrderByDescending(o => o.orderdate)
-      //     .Skip(offset)
-      //     .Take(size)
-      //     .ToListAsync();
+      var orders = await query
+          .OrderByDescending(o => o.orderdate)
+          .Skip(offset)
+          .Take(size)
+          .ToListAsync();
 
-      // var orderIds = orders.Select(o => o.id).ToList();
-      // var detailLookup = await LoadOrderLineLookupAsync(orderIds);
+      var orderIds = orders.Select(o => o.id).ToList();
+      var detailLookup = await LoadOrderLineLookupAsync(orderIds);
 
-      // var items = orders
-      //   .Select(order =>
-      //   {
-      //     detailLookup.TryGetValue(order.id, out var detail);
-      //     return MapToDto(order, detail);
-      //   })
-      //   .ToList();
+      var items = orders
+        .Select(order =>
+        {
+          detailLookup.TryGetValue(order.id, out var detail);
+          return MapToDto(order, detail);
+        })
+        .ToList();
 
-      // return new PagedResult<OrderAdminDTO>
-      // {
-      //   Items = items,
-      //   Total = total,
-      //   Page = page,
-      //   Size = size
-      // };
-      return null;
+      return new PagedResult<OrderAdminDTO>
+      {
+        Items = items,
+        Total = total,
+        Page = page,
+        Size = size
+      };
     }
 
     public async Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId)
     {
-      return null;
-      // var order = await _connect.orders
-      //     .AsNoTracking()
-      //     .Include(o => o.account)
-      //     .Include(o => o.address)
-      //     .Include(o => o.variant)
-      //       .ThenInclude(v => v.product)
-      //     .FirstOrDefaultAsync(o => o.id == orderId);
+      var order = await _connect.orders
+          .AsNoTracking()
+          .Include(o => o.account)
+          .Include(o => o.address)
+          .FirstOrDefaultAsync(o => o.id == orderId);
 
-      // return order == null ? null : MapToDto(order);
+      if (order == null) return null;
+
+      var lookup = await LoadOrderLineLookupAsync(new[] { orderId });
+      lookup.TryGetValue(orderId, out var detail);
+
+      return MapToDto(order, detail);
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus)

@@ -279,11 +279,9 @@ namespace dotnet.Repository
 
     public async Task<ProductAdminDTO?> GetProductAdminByIdAsync(int productId)
     {
-      var sql = $"SELECT * FROM ({ConnectData.ProductAdminSql}) AS product_admin WHERE product_id = {{0}}";
-      return await _connect.Set<ProductAdminDTO>()
-        .FromSqlRaw(sql, productId)
+      return await _connect.productAdmins
         .AsNoTracking()
-        .FirstOrDefaultAsync();
+        .FirstOrDefaultAsync(p => p.product_id == productId);
     }
 
     public async Task<ProductAdminDTO?> CreateVariantAsync(int productId, VariantAdminCreateRequest request)
@@ -309,7 +307,52 @@ namespace dotnet.Repository
       await _connect.SaveChangesAsync();
       return await GetProductAdminByIdAsync(productId);
     }
-    // Duplicate UpdateVariantAsync and DeleteVariantAsync methods removed — original implementations are retained earlier in the file.
+
+    public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
+    {
+      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
+      if (product == null) return null;
+
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
+      if (variant == null) return null;
+
+      var now = DateTime.UtcNow;
+
+      if (request.valuevariant != null)
+        variant.valuevariant = BuildJsonDocument(request.valuevariant);
+
+      if (request.stock.HasValue)
+        variant.stock = request.stock.Value;
+
+      if (request.inputprice.HasValue)
+        variant.inputprice = request.inputprice.Value;
+
+      if (request.price.HasValue)
+        variant.price = request.price.Value;
+
+      variant.updatedate = now;
+      product.updatedate = now;
+
+      await _connect.SaveChangesAsync();
+      return await GetProductAdminByIdAsync(productId);
+    }
+
+    public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
+    {
+      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
+      if (product == null) return null;
+
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
+      if (variant == null) return null;
+
+      var now = DateTime.UtcNow;
+      variant.isdeleted = true;
+      variant.updatedate = now;
+      product.updatedate = now;
+
+      await _connect.SaveChangesAsync();
+      return await GetProductAdminByIdAsync(productId);
+    }
     public async Task<int> countProductBySql(string sql)
     {
       var count = await _connect.Database.SqlQueryRaw<int>(sql).SingleAsync();

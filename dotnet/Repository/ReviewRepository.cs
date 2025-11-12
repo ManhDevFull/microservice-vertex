@@ -20,13 +20,13 @@ namespace dotnet.Repository
     }
 
     public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
-            int page,
-            int size,
-            int? rating,
-            bool? updated,
-            string? keyword,
-            DateTime? fromDate,
-            DateTime? toDate)
+        int page,
+        int size,
+        int? rating,
+        bool? updated,
+        string? keyword,
+        DateTime? fromDate,
+        DateTime? toDate)
     {
       page = Math.Max(1, page);
       size = Math.Clamp(size, 1, 100);
@@ -36,10 +36,6 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(r => r.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.orderdetails)
-              .ThenInclude(od => od.variant!)
-                .ThenInclude(v => v.product)
           .AsQueryable();
 
       if (rating.HasValue)
@@ -83,7 +79,14 @@ namespace dotnet.Repository
           .Take(size)
           .ToListAsync();
 
-      var items = reviews.Select(MapToDto).ToList();
+      var orderIds = reviews.Select(r => r.orderid).Distinct().ToList();
+      var detailLookup = await LoadOrderLineLookupAsync(orderIds);
+
+      var items = reviews.Select(review =>
+      {
+        detailLookup.TryGetValue(review.orderid, out var detail);
+        return MapToDto(review, detail);
+      }).ToList();
 
       return new PagedResult<ReviewAdminDTO>
       {
@@ -100,13 +103,14 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(r => r.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.orderdetails)
-              .ThenInclude(od => od.variant!)
-                .ThenInclude(v => v.product)
           .FirstOrDefaultAsync(r => r.id == reviewId);
 
-      return review == null ? null : MapToDto(review);
+      if (review == null) return null;
+
+      var detailLookup = await LoadOrderLineLookupAsync(new[] { review.orderid });
+      detailLookup.TryGetValue(review.orderid, out var detail);
+
+      return MapToDto(review, detail);
     }
 
     public async Task<ReviewAdminSummaryDTO> GetSummaryAsync()
@@ -138,11 +142,10 @@ namespace dotnet.Repository
       return true;
     }
 
-    private static ReviewAdminDTO MapToDto(dotnet.Model.Review review)
+    private static ReviewAdminDTO MapToDto(dotnet.Model.Review review, dotnet.Model.OrderDetail? primaryDetail)
     {
       var order = review.order;
       var account = order?.account;
-      var primaryDetail = order?.orderdetails?.FirstOrDefault();
       var variant = primaryDetail?.variant;
       var product = variant?.product;
 
@@ -163,6 +166,7 @@ namespace dotnet.Repository
         VariantAttributes = ExtractAttributes(variant?.valuevariant)
       };
     }
+
     private static Dictionary<string, string> ExtractAttributes(JsonDocument? document)
     {
       var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -192,6 +196,24 @@ namespace dotnet.Repository
       }
 
       return result;
+    }
+
+    private async Task<Dictionary<int, dotnet.Model.OrderDetail>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, dotnet.Model.OrderDetail>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.First());
     }
   }
 }

@@ -13,8 +13,13 @@ public class Variant
   public DateTime updatedate { get; set; }
   public bool isdeleted { get; set; } = false;
 
+<<<<<<< HEAD
   public Product? product { get; set; }
   public ICollection<OrderDetail>? orderdetails { get; set; }
   public ICollection<ShoppingCart>? carts { get; set; }
   public ICollection<DiscountProduct>? discountProduct { get; set; }
 }
+=======
+  }
+}
+>>>>>>> main

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using be_dotnet_ecommerce1.Data;
@@ -19,26 +20,25 @@ namespace dotnet.Repository
     }
     public List<UserDTO> getUserAdmin()
     {
-      var sql = @"
-            SELECT 
-                a.id,
-                a.firstname || ' ' || a.lastname AS name,
-                a.email,
-                a.role,
-                COALESCE(a.avatarimg, '') AS avatarimg,
-                COALESCE(
-                    (SELECT tel FROM address ad WHERE ad.account_id = a.id LIMIT 1),
-                    ''
-                ) AS tel,
-                COUNT(o.id) AS orders
-            FROM account a
-            LEFT JOIN orders o ON a.id = o.account_id
-            GROUP BY a.id, a.firstname, a.lastname, a.email, a.role, a.avatarimg
-            ORDER BY a.id;
-        ";
+      var users = _connect.accounts
+        .AsNoTracking()
+        .Select(a => new UserDTO
+        {
+          id = a.id,
+          name = ((a.firstname ?? string.Empty) + " " + (a.lastname ?? string.Empty)).Trim(),
+          email = a.email ?? string.Empty,
+          role = a.role,
+          avatarImg = a.avatarimg,
+          tel = a.addresses
+            .OrderBy(ad => ad.id)
+            .Select(ad => ad.tel)
+            .FirstOrDefault() ?? string.Empty,
+          orders = a.orders.Count()
+        })
+        .OrderBy(u => u.id)
+        .ToList();
 
-      var list = _connect.Set<UserDTO>().FromSqlRaw(sql).AsNoTracking().ToList();
-      return list;
+      return users;
     }
 
     public async Task<Account?> GetAccountByEmail(string email)

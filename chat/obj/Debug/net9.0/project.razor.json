@@ -1,6 +1,6 @@
 {
-  "SerializedFilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/obj/Debug/net9.0/project.razor.json",
-  "FilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/dotnet.csproj",
+  "SerializedFilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/chat/obj/Debug/net9.0/project.razor.json",
+  "FilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/chat/chat.csproj",
   "Configuration": {
     "ConfigurationName": "MVC-3.0",
     "LanguageVersion": "8.0",
@@ -19463,7 +19463,7 @@
     ],
     "CSharpLanguageVersion": 1300
   },
-  "RootNamespace": "dotnet",
+  "RootNamespace": "chat",
   "Documents": [],
   "SerializationFormat": "0.3"
 }
