@@ -1,2 +1,0 @@
-obj\Debug\net9.0/Chat.cs \
-obj\Debug\net9.0/ChatGrpc.cs: ../Contracts/chat.proto
