@@ -8,6 +8,7 @@ using dotnet.Dtos.admin;
 using dotnet.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace dotnet.Repository
 {
   public class ReviewRepository : IReviewRepository
@@ -19,7 +20,7 @@ namespace dotnet.Repository
       _connect = connect;
     }
 
-    public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
+     public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
         int page,
         int size,
         int? rating,
@@ -96,7 +97,6 @@ namespace dotnet.Repository
         Size = size
       };
     }
-
     public async Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId)
     {
       var review = await _connect.reviews

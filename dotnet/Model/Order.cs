@@ -15,8 +15,4 @@ public class Order
   public Address? address { get; set; }
   public ICollection<OrderDetail>? orderdetails { get; set; }
   public Review? review { get; set; }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> main

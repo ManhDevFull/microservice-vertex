@@ -12,13 +12,13 @@ using Npgsql;
 
 namespace dotnet.Repository
 {
-  public class OrderRepository : IOrderRepository
-  {
-    private readonly ConnectData _connect;
-    public OrderRepository(ConnectData connect)
+    public class OrderRepository : IOrderRepository
     {
-      _connect = connect;
-    }
+        private readonly ConnectData _connect;
+        public OrderRepository(ConnectData connect)
+        {
+            _connect = connect;
+        }
 
         public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
         {
@@ -48,18 +48,18 @@ namespace dotnet.Repository
                 ORDER BY o.id DESC;
             ";
 
-      var accountIdParam = new NpgsqlParameter("@accountId", accountId);
+            var accountIdParam = new NpgsqlParameter("@accountId", accountId);
 
             var orders = await _connect.Database
                                    .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
                                    .AsNoTracking()
                                    .ToListAsync();
 
-      return orders;
-    }
+            return orders;
+        }
 
 
-      public async Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
+    public async Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
         int page,
         int size,
         string? status,
@@ -208,60 +208,7 @@ namespace dotnet.Repository
       return true;
     }
 
-    private static string BuildAddress(dotnet.Model.Address? address)
-    {
-      if (address == null) return string.Empty;
-
-      var parts = new List<string>();
-
-      if (!string.IsNullOrWhiteSpace(address.detail))
-      {
-        parts.Add(address.detail.Trim());
-      }
-
-      if (!string.IsNullOrWhiteSpace(address.description))
-      {
-        parts.Add(address.description.Trim());
-      }
-
-      return string.Join(", ", parts);
-    }
-
-    private static Dictionary<string, string> ExtractAttributes(JsonDocument? document)
-    {
-      var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-      if (document == null)
-      {
-        return result;
-      }
-
-      var root = document.RootElement;
-      if (root.ValueKind != JsonValueKind.Object)
-      {
-        return result;
-      }
-
-      foreach (var property in root.EnumerateObject())
-      {
-        result[property.Name] = property.Value.ValueKind switch
-        {
-          JsonValueKind.String => property.Value.GetString() ?? string.Empty,
-          JsonValueKind.Number => property.Value.TryGetInt64(out var longVal)
-              ? longVal.ToString()
-              : property.Value.TryGetDecimal(out var decVal)
-                ? decVal.ToString("G")
-                : property.Value.ToString(),
-          JsonValueKind.True => "true",
-          JsonValueKind.False => "false",
-          _ => property.Value.ToString()
-        };
-      }
-
-      return result;
-    }
-
-     public async Task<OrderAdminSummaryDTO> GetSummaryAsync()
+    public async Task<OrderAdminSummaryDTO> GetSummaryAsync()
     {
       var summary = new OrderAdminSummaryDTO();
 
@@ -318,6 +265,113 @@ namespace dotnet.Repository
                                .SumAsync();
 
       return summary;
+    }
+
+    private static OrderAdminDTO MapToDto(dotnet.Model.Order order, dotnet.Model.OrderDetail? primaryDetail)
+    {
+      var variant = primaryDetail?.variant;
+      var product = variant?.product;
+      var account = order.account;
+      var address = order.address;
+      var resolvedVariantId = primaryDetail?.variant_id ?? 0;
+      var quantity = primaryDetail?.quantity ?? 0;
+      if (quantity == 0) quantity = 1;
+
+      var unitPrice = variant?.price ?? 0;
+      var totalPrice = unitPrice * quantity;
+
+      return new OrderAdminDTO
+      {
+        Id = order.id,
+        AccountId = order.accountid,
+        VariantId = resolvedVariantId,
+        CustomerName = $"{(account?.firstname ?? "").Trim()} {(account?.lastname ?? "").Trim()}".Trim(),
+        CustomerEmail = account?.email ?? string.Empty,
+        CustomerPhone = address?.tel ?? string.Empty,
+        ShippingAddress = BuildAddress(address),
+        ProductName = product?.nameproduct ?? string.Empty,
+        ProductImage = product?.imageurls?.FirstOrDefault() ?? string.Empty,
+        VariantAttributes = ExtractAttributes(variant?.valuevariant),
+        Quantity = quantity,
+        UnitPrice = unitPrice,
+        TotalPrice = totalPrice,
+        StatusOrder = order.statusorder ?? string.Empty,
+        StatusPay = order.statuspay ?? string.Empty,
+        TypePay = order.typepay ?? string.Empty,
+        OrderDate = order.orderdate,
+        ReceiveDate = order.receivedate
+      };
+    }
+
+    private async Task<Dictionary<int, dotnet.Model.OrderDetail>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, dotnet.Model.OrderDetail>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    private static string BuildAddress(dotnet.Model.Address? address)
+    {
+      if (address == null) return string.Empty;
+
+      var parts = new List<string>();
+
+      if (!string.IsNullOrWhiteSpace(address.detail))
+      {
+        parts.Add(address.detail.Trim());
+      }
+
+      if (!string.IsNullOrWhiteSpace(address.description))
+      {
+        parts.Add(address.description.Trim());
+      }
+
+      return string.Join(", ", parts);
+    }
+
+    private static Dictionary<string, string> ExtractAttributes(JsonDocument? document)
+    {
+      var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+      if (document == null)
+      {
+        return result;
+      }
+
+      var root = document.RootElement;
+      if (root.ValueKind != JsonValueKind.Object)
+      {
+        return result;
+      }
+
+      foreach (var property in root.EnumerateObject())
+      {
+        result[property.Name] = property.Value.ValueKind switch
+        {
+          JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+          JsonValueKind.Number => property.Value.TryGetInt64(out var longVal)
+              ? longVal.ToString()
+              : property.Value.TryGetDecimal(out var decVal)
+                ? decVal.ToString("G")
+                : property.Value.ToString(),
+          JsonValueKind.True => "true",
+          JsonValueKind.False => "false",
+          _ => property.Value.ToString()
+        };
+      }
+
+      return result;
     }
   }
 }

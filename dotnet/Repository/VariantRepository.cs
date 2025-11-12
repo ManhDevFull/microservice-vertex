@@ -57,35 +57,7 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
             return rs;
         }
 
-        public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO) // done
-        {
-            var sql = "select * from variant";
-            var conditions = new List<string>();
-            var conditionsProduct = new Dictionary<string, List<string>>();
-            var conditionsVariant = new Dictionary<string, List<string>>();
-
-            if (dTO.Filter != null)
-            {
-                foreach (var entry in dTO.Filter)
-                {
-                    var key = item.Key;
-                    var value = item.Value.ToList();
-                    if (key == "brand" || key == "namecategory")
-                        conditionsProduct[key] = value;
-                    else
-                        conditionsVariant[key] = value;
-                }
-            }
-
-            if (conditions.Count > 0)
-            {
-                sql += " where " + string.Join(" AND ", conditions);
-                Console.Write(sql);
-            }
-            var result = await _connect.variants.FromSqlRaw(sql).ToListAsync();
-            return result;
-        }
-        public async Task<Variant[]> GetVariantByIdProduct(int id)
+              public async Task<Variant[]> GetVariantByIdProduct(int id)
         {
             var result = await _connect.variants
                 .Include(p => p.product)

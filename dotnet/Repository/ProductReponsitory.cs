@@ -208,53 +208,6 @@ namespace dotnet.Repository
     }
 
 
-
-    public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
-    {
-      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
-      if (product == null) return null;
-
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
-      if (variant == null) return null;
-
-      var now = DateTime.UtcNow;
-
-      if (request.valuevariant != null)
-        variant.valuevariant = BuildJsonDocument(request.valuevariant);
-
-      if (request.stock.HasValue)
-        variant.stock = request.stock.Value;
-
-      if (request.inputprice.HasValue)
-        variant.inputprice = request.inputprice.Value;
-
-      if (request.price.HasValue)
-        variant.price = request.price.Value;
-
-      variant.updatedate = now;
-      product.updatedate = now;
-
-      await _connect.SaveChangesAsync();
-      return await GetProductAdminByIdAsync(productId);
-    }
-
-    public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
-    {
-      var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
-      if (product == null) return null;
-
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
-      if (variant == null) return null;
-
-      var now = DateTime.UtcNow;
-      variant.isdeleted = true;
-      variant.updatedate = now;
-      product.updatedate = now;
-
-      await _connect.SaveChangesAsync();
-      return await GetProductAdminByIdAsync(productId);
-    }
-
     public async Task<bool> DeleteProductAsync(int productId)
     {
       var product = await _connect.products
@@ -308,7 +261,7 @@ namespace dotnet.Repository
       return await GetProductAdminByIdAsync(productId);
     }
 
-    public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
+   public async Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request)
     {
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
@@ -337,7 +290,8 @@ namespace dotnet.Repository
       return await GetProductAdminByIdAsync(productId);
     }
 
-    public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
+
+     public async Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
     {
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
