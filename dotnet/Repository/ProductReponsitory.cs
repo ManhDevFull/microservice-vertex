@@ -29,7 +29,11 @@ namespace dotnet.Repository
     {
         // Lấy danh sách variant thỏa filter
         var variants = await variantRepository.GetVariantByFilter(dTO) ?? new List<Variant>();
-        var productIds = variants.Select(v => v.productid).Distinct().ToList();
+        var productIds = variants.Select(v => v.product_id).Distinct().ToList();
+        if (productIds.Count == 0)
+        {
+            return new List<ProductFilterDTO>();
+        }
 
         // Lấy danh sách sản phẩm có variant thuộc list
         var products = await _connect.products
@@ -50,7 +54,7 @@ namespace dotnet.Repository
 
                 // ✅ map variant
                 variant = _connect.variants
-                    .Where(v => v.productid == p.id)
+                    .Where(v => v.product_id == p.id && !v.isdeleted)
                     .Select(v => new VariantDTO
                     {
                         id = v.id,
@@ -67,21 +71,23 @@ namespace dotnet.Repository
                 discount = (from dp in _connect.discountProducts
                             join d in _connect.discounts on dp.discountid equals d.id
                             join v in _connect.variants on dp.variantid equals v.id
-                            where v.productid == p.id
+                            where v.product_id == p.id && !v.isdeleted
                             select d).ToArray(),
 
                 // rating
                 rating = (from r in _connect.reviews
-                          join o in _connect.orders on r.orderid equals o.id
-                          join v in _connect.variants on o.variantid equals v.id
-                          where v.productid == p.id
-                          select (int?)r.rating).Sum() ?? 0,
+                          join od in _connect.orderdetails on r.orderid equals od.order_id
+                          join v in _connect.variants on od.variant_id equals v.id
+                          where v.product_id == p.id && !v.isdeleted
+                          group r by r.id into reviewGroup
+                          select (int?)reviewGroup.Max(x => x.rating)).Sum() ?? 0,
 
                 // order count
                 order = (from o in _connect.orders
-                         join v in _connect.variants on o.variantid equals v.id
-                         where v.productid == p.id
-                         select o).Count()
+                         join od in _connect.orderdetails on o.id equals od.id
+                         join v in _connect.variants on od.variant_id equals v.id
+                         where v.product_id == p.id && !v.isdeleted
+                         select o.id).Distinct().Count()
             })
             .ToListAsync();
 
@@ -134,13 +140,19 @@ namespace dotnet.Repository
         if (stock.Value)
         {
           q = from p in q
-              where _connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where _connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
         else
         {
           q = from p in q
-              where !_connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where !_connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
       }
@@ -216,7 +228,7 @@ namespace dotnet.Repository
         {
           var newVariant = new Variant
           {
-            productid = product.id,
+            product_id = product.id,
             valuevariant = BuildJsonDocument(variant.valuevariant),
             stock = variant.stock,
             inputprice = variant.inputprice,
@@ -296,11 +308,9 @@ namespace dotnet.Repository
 
     public async Task<ProductAdminDTO?> GetProductAdminByIdAsync(int productId)
     {
-      var sql = $"SELECT * FROM ({ConnectData.ProductAdminSql}) AS product_admin WHERE product_id = {{0}}";
-      return await _connect.Set<ProductAdminDTO>()
-        .FromSqlRaw(sql, productId)
+      return await _connect.productAdmins
         .AsNoTracking()
-        .FirstOrDefaultAsync();
+        .FirstOrDefaultAsync(p => p.product_id == productId);
     }
 
     public async Task<ProductAdminDTO?> CreateVariantAsync(int productId, VariantAdminCreateRequest request)
@@ -311,7 +321,7 @@ namespace dotnet.Repository
       var now = DateTime.UtcNow;
       var variant = new Variant
       {
-        productid = productId,
+        product_id = productId,
         valuevariant = BuildJsonDocument(request.valuevariant),
         stock = request.stock,
         inputprice = request.inputprice,
@@ -332,7 +342,7 @@ namespace dotnet.Repository
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
 
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
       if (variant == null) return null;
 
       var now = DateTime.UtcNow;
@@ -361,7 +371,7 @@ namespace dotnet.Repository
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
 
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
       if (variant == null) return null;
 
       var now = DateTime.UtcNow;

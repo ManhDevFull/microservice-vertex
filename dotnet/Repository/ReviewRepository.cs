@@ -36,9 +36,6 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(r => r.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
           .AsQueryable();
 
       if (rating.HasValue)
@@ -69,9 +66,9 @@ namespace dotnet.Repository
         var pattern = $"%{trimmed}%";
         query = query.Where(r =>
             EF.Functions.ILike(r.content ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.account.firstname + " " + r.order.account.lastname, pattern) ||
+            EF.Functions.ILike(r.order!.account.firstname + " " + r.order.account.lastname, pattern) ||
             EF.Functions.ILike(r.order.account.email ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.variant.product.nameproduct ?? string.Empty, pattern));
+            r.order.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? string.Empty, pattern)));
       }
 
       var total = await query.CountAsync();
@@ -82,7 +79,14 @@ namespace dotnet.Repository
           .Take(size)
           .ToListAsync();
 
-      var items = reviews.Select(MapToDto).ToList();
+      var orderIds = reviews.Select(r => r.orderid).Distinct().ToList();
+      var detailLookup = await LoadOrderLineLookupAsync(orderIds);
+
+      var items = reviews.Select(review =>
+      {
+        detailLookup.TryGetValue(review.orderid, out var detail);
+        return MapToDto(review, detail);
+      }).ToList();
 
       return new PagedResult<ReviewAdminDTO>
       {
@@ -99,12 +103,14 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(r => r.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
           .FirstOrDefaultAsync(r => r.id == reviewId);
 
-      return review == null ? null : MapToDto(review);
+      if (review == null) return null;
+
+      var detailLookup = await LoadOrderLineLookupAsync(new[] { review.orderid });
+      detailLookup.TryGetValue(review.orderid, out var detail);
+
+      return MapToDto(review, detail);
     }
 
     public async Task<ReviewAdminSummaryDTO> GetSummaryAsync()
@@ -136,11 +142,11 @@ namespace dotnet.Repository
       return true;
     }
 
-    private static ReviewAdminDTO MapToDto(dotnet.Model.Review review)
+    private static ReviewAdminDTO MapToDto(dotnet.Model.Review review, dotnet.Model.OrderDetail? primaryDetail)
     {
       var order = review.order;
       var account = order?.account;
-      var variant = order?.variant;
+      var variant = primaryDetail?.variant;
       var product = variant?.product;
 
       return new ReviewAdminDTO
@@ -191,41 +197,23 @@ namespace dotnet.Repository
 
       return result;
     }
-           public async Task<Dictionary<int, int>> getSumQuantityReviewByIdProduct(List<int> ids) // đếm số luowngj review theo mã sản phẩm
-        {
-          if (ids == null)
-                return new Dictionary<int, int>();
-            var result = await (
-                from v in _connect.variants
-                join o in _connect.orders on v.id equals o.variantid
-                join r in _connect.reviews on o.id equals r.orderid
-                where ids.Contains(v.productid)
-                group r by v.productid into g
-                select new
-                {
-                    productid = g.Key,
-                    reviewcount = g.Count()
-                }
-            ).ToListAsync();
-            return result.ToDictionary(x => x.productid, x => x.reviewcount);
-        }
-     public async Task<Dictionary<int, int>> getSumRatingByIdsProduct(List<int> ids) // tổng số rating theo mã sản phâm
-        {
-            if (ids == null)
-                return new Dictionary<int, int>();
-            var result = await (
-                from v in _connect.variants
-                join o in _connect.orders on v.id equals o.variantid
-                join r in _connect.reviews on o.id equals r.orderid
-                where ids.Contains(v.productid)
-                group r by v.productid into g
-                select new
-                {
-                    productid = g.Key,
-                    reviewsum = g.Sum(x => x.rating)
-                }
-            ).ToListAsync();
-            return result.ToDictionary(x => x.productid, x => x.reviewsum);
-        }
+
+    private async Task<Dictionary<int, dotnet.Model.OrderDetail>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, dotnet.Model.OrderDetail>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.First());
+    }
   }
 }

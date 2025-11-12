@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "DQEUDvba3BI=",
+  "success": true,
+  "projectFilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/gateway/gateway.csproj",
+  "expectedPackageFiles": [
+    "/home/manh/.nuget/packages/system.io.hashing/7.0.0/system.io.hashing.7.0.0.nupkg.sha512",
+    "/home/manh/.nuget/packages/yarp.reverseproxy/2.1.0/yarp.reverseproxy.2.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}
