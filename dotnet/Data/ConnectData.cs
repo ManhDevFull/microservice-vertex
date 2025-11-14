@@ -1,4 +1,3 @@
-using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using dotnet.Dtos.admin;
 using dotnet.Model;
@@ -38,7 +37,6 @@ namespace be_dotnet_ecommerce1.Data
         public DbSet<V_variant> v_Variants { get; set; }
         // v_category
         public DbSet<V_Category> v_Categories { get; set; }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // -------- account --------
@@ -222,7 +220,7 @@ namespace be_dotnet_ecommerce1.Data
             {
                 e.ToTable("review");
                 e.HasKey(x => x.id);
-                e.Property(x => x.orderid).HasColumnName("order_id");
+                e.Property(x => x.orderdetail_id).HasColumnName("order_id");
                 e.Property(x => x.content).HasColumnName("content");
                 e.Property(x => x.rating).HasColumnName("rating");
                 e.Property(x => x.imageurls).HasColumnName("imageurls").HasColumnType("text[]");
@@ -230,9 +228,9 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.updatedate).HasColumnName("updatedate");
                 e.Property(x => x.isupdated).HasColumnName("isupdated");
 
-                e.HasOne(x => x.order)
-                    .WithOne(o => o.review)
-                    .HasForeignKey<Review>(x => x.orderid)
+                e.HasOne(x => x.orderdetail)
+                    .WithMany(o => o.reviews)
+                    .HasForeignKey(x => x.orderdetail_id)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -334,7 +332,6 @@ namespace be_dotnet_ecommerce1.Data
                 entity.HasNoKey();
                 entity.ToView("v_variant_filters");
             });
-
             base.OnModelCreating(modelBuilder);
         }
     }

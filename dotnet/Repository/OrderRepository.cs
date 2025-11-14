@@ -149,8 +149,12 @@ namespace dotnet.Repository
       var items = orders
         .Select(order =>
         {
-          detailLookup.TryGetValue(order.id, out var detail);
-          return MapToDto(order, detail);
+          detailLookup.TryGetValue(order.id, out var details);
+          IReadOnlyList<dotnet.Model.OrderDetail> normalizedDetails =
+            details != null
+              ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
+              : Array.Empty<dotnet.Model.OrderDetail>();
+          return MapToDto(order, normalizedDetails);
         })
         .ToList();
 
@@ -174,9 +178,13 @@ namespace dotnet.Repository
       if (order == null) return null;
 
       var lookup = await LoadOrderLineLookupAsync(new[] { orderId });
-      lookup.TryGetValue(orderId, out var detail);
+      lookup.TryGetValue(orderId, out var details);
+      IReadOnlyList<dotnet.Model.OrderDetail> normalizedDetails =
+        details != null
+          ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
+          : Array.Empty<dotnet.Model.OrderDetail>();
 
-      return MapToDto(order, detail);
+      return MapToDto(order, normalizedDetails);
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus)
@@ -267,10 +275,8 @@ namespace dotnet.Repository
       return summary;
     }
 
-    private static OrderAdminDTO MapToDto(dotnet.Model.Order order, dotnet.Model.OrderDetail? primaryDetail)
+    private static OrderAdminDTO MapToDto(dotnet.Model.Order order, IReadOnlyList<dotnet.Model.OrderDetail> details)
     {
-      var variant = primaryDetail?.variant;
-      var product = variant?.product;
       var account = order.account;
       var address = order.address;
       var resolvedVariantId = primaryDetail?.variant_id ?? 0;
@@ -280,18 +286,54 @@ namespace dotnet.Repository
       var unitPrice = variant?.price ?? 0;
       var totalPrice = unitPrice * quantity;
 
+      var normalizedDetails = details?
+        .Where(d => d != null)
+        .ToList() ?? new List<dotnet.Model.OrderDetail>();
+
+      var primaryDetail = normalizedDetails.FirstOrDefault();
+      var variant = primaryDetail?.variant;
+      var product = variant?.product;
+      var resolvedVariantId = primaryDetail?.variant_id ?? 0;
+      var variantAttributes = ExtractAttributes(variant?.valuevariant);
+      var productSnapshot = BuildProductSnapshot(product, resolvedVariantId, variantAttributes);
+
+      if (productSnapshot == null && primaryDetail != null)
+      {
+        var gallery = product?.imageurls ?? Array.Empty<string>();
+        productSnapshot = new ProductSnapshotDTO
+        {
+          ProductId = product?.id ?? 0,
+          Name = product?.nameproduct ?? string.Empty,
+          Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+          Gallery = gallery,
+          VariantId = resolvedVariantId,
+          VariantAttributes = new Dictionary<string, string>(variantAttributes, StringComparer.OrdinalIgnoreCase)
+        };
+      }
+
+      var items = BuildOrderItems(normalizedDetails);
+      var primaryItem = items.FirstOrDefault();
+
+      var quantity = primaryItem?.Quantity ?? primaryDetail?.quantity ?? 0;
+      if (quantity == 0) quantity = 1;
+
+      var unitPrice = primaryItem?.UnitPrice ?? variant?.price ?? 0;
+      var totalPrice = primaryItem?.TotalPrice ?? unitPrice * quantity;
+      var resolvedAttributes = productSnapshot?.VariantAttributes ?? variantAttributes ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
       return new OrderAdminDTO
       {
         Id = order.id,
         AccountId = order.accountid,
-        VariantId = resolvedVariantId,
+        VariantId = productSnapshot?.VariantId ?? resolvedVariantId,
         CustomerName = $"{(account?.firstname ?? "").Trim()} {(account?.lastname ?? "").Trim()}".Trim(),
         CustomerEmail = account?.email ?? string.Empty,
         CustomerPhone = address?.tel ?? string.Empty,
         ShippingAddress = BuildAddress(address),
-        ProductName = product?.nameproduct ?? string.Empty,
-        ProductImage = product?.imageurls?.FirstOrDefault() ?? string.Empty,
-        VariantAttributes = ExtractAttributes(variant?.valuevariant),
+        ProductName = productSnapshot?.Name ?? product?.nameproduct ?? string.Empty,
+        ProductImage = productSnapshot?.Thumbnail ?? product?.imageurls?.FirstOrDefault() ?? string.Empty,
+        VariantAttributes = resolvedAttributes,
+        Items = items,
         Quantity = quantity,
         UnitPrice = unitPrice,
         TotalPrice = totalPrice,
@@ -299,14 +341,79 @@ namespace dotnet.Repository
         StatusPay = order.statuspay ?? string.Empty,
         TypePay = order.typepay ?? string.Empty,
         OrderDate = order.orderdate,
-        ReceiveDate = order.receivedate
+        ReceiveDate = order.receivedate,
+        Product = productSnapshot
       };
     }
 
-    private async Task<Dictionary<int, dotnet.Model.OrderDetail>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    private static ProductSnapshotDTO? BuildProductSnapshot(dotnet.Model.Product? product, int variantId, Dictionary<string, string> attributes)
+    {
+      if (product == null)
+      {
+        return null;
+      }
+
+      var gallery = product.imageurls ?? Array.Empty<string>();
+
+      return new ProductSnapshotDTO
+      {
+        ProductId = product.id,
+        Name = product.nameproduct ?? string.Empty,
+        Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+        Gallery = gallery,
+        VariantId = variantId,
+        VariantAttributes = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase)
+      };
+    }
+
+    private static List<OrderAdminItemDTO> BuildOrderItems(IReadOnlyList<dotnet.Model.OrderDetail> details)
+    {
+      if (details == null || details.Count == 0)
+      {
+        return new List<OrderAdminItemDTO>();
+      }
+
+      var items = new List<OrderAdminItemDTO>(details.Count);
+
+      foreach (var detail in details)
+      {
+        if (detail == null) continue;
+
+        var quantity = detail.quantity == 0 ? 1 : detail.quantity;
+        var price = detail.variant?.price ?? 0;
+        var attributes = ExtractAttributes(detail.variant?.valuevariant);
+        var snapshot = BuildProductSnapshot(detail.variant?.product, detail.variant_id, attributes);
+
+        if (snapshot == null)
+        {
+          var gallery = detail.variant?.product?.imageurls ?? Array.Empty<string>();
+          snapshot = new ProductSnapshotDTO
+          {
+            ProductId = detail.variant?.product?.id ?? 0,
+            Name = detail.variant?.product?.nameproduct ?? string.Empty,
+            Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+            Gallery = gallery,
+            VariantId = detail.variant_id,
+            VariantAttributes = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase)
+          };
+        }
+
+        items.Add(new OrderAdminItemDTO
+        {
+          Product = snapshot,
+          Quantity = quantity,
+          UnitPrice = price,
+          TotalPrice = price * quantity
+        });
+      }
+
+      return items;
+    }
+
+    private async Task<Dictionary<int, List<dotnet.Model.OrderDetail>>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
     {
       var ids = orderIds.Distinct().ToList();
-      if (ids.Count == 0) return new Dictionary<int, dotnet.Model.OrderDetail>();
+      if (ids.Count == 0) return new Dictionary<int, List<dotnet.Model.OrderDetail>>();
 
       var details = await _connect.orderdetails
         .AsNoTracking()
@@ -316,9 +423,64 @@ namespace dotnet.Repository
         .OrderBy(od => od.id)
         .ToListAsync();
 
+      await EnsureVariantGraphLoadedAsync(details);
+
       return details
         .GroupBy(od => od.order_id)
-        .ToDictionary(g => g.Key, g => g.First());
+        .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private async Task EnsureVariantGraphLoadedAsync(List<dotnet.Model.OrderDetail> details)
+    {
+      if (details.Count == 0) return;
+
+      var missingVariantIds = details
+        .Where(od => od.variant == null)
+        .Select(od => od.variant_id)
+        .Distinct()
+        .ToList();
+
+      if (missingVariantIds.Count > 0)
+      {
+        var variantLookup = await _connect.variants
+          .AsNoTracking()
+          .Where(v => missingVariantIds.Contains(v.id))
+          .Include(v => v.product)
+          .ToDictionaryAsync(v => v.id);
+
+        foreach (var detail in details.Where(od => od.variant == null))
+        {
+          if (variantLookup.TryGetValue(detail.variant_id, out var variant))
+          {
+            detail.variant = variant;
+          }
+        }
+      }
+
+      var missingProductIds = details
+        .Select(od => od.variant)
+        .Where(v => v != null && v.product == null)
+        .Select(v => v!.product_id)
+        .Distinct()
+        .ToList();
+
+      if (missingProductIds.Count == 0)
+      {
+        return;
+      }
+
+      var productLookup = await _connect.products
+        .AsNoTracking()
+        .Where(p => missingProductIds.Contains(p.id))
+        .ToDictionaryAsync(p => p.id);
+
+      foreach (var variant in details.Select(od => od.variant).Where(v => v != null && v.product == null))
+      {
+        if (variant != null && productLookup.TryGetValue(variant.product_id, out var product))
+        {
+          variant.product = product;
+        }
+      }
     }
 
     private static string BuildAddress(dotnet.Model.Address? address)

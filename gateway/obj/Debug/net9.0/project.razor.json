@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "SerializedFilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/gateway/obj/Debug/net9.0/project.razor.json",
   "FilePath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/gateway/gateway.csproj",
@@ -19467,3 +19468,5 @@
   "Documents": [],
   "SerializationFormat": "0.3"
 }
+=======
+>>>>>>> develop
