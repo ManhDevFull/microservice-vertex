@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option csharp_namespace = "Contracts.Grpc";
+
+package catalog;
+
+service CategoryGrpc {
+  rpc Ping (Empty) returns (PingReply);
+}
+
+message Empty {}
+message PingReply {
+  string message = 1;
+}
