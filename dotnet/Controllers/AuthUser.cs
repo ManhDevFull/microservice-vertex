@@ -101,6 +101,7 @@ namespace dotnet.Controllers
           data = new
           {
             accessToken,
+            refreshToken,
             user = new { id = user.id, name = $"{user.firstname} {user.lastname}", email = dto.Email, avatarUrl = user.avatarimg, rule = user.role }
           }
         });
@@ -206,7 +207,7 @@ namespace dotnet.Controllers
         return Ok(new
         {
           status = 200,
-          data = new { accessToken, user = new { id = user.id, name = displayName, avatarUrl = displayAvatar, email, rule = user.role } }
+          data = new { accessToken, refreshToken, user = new { id = user.id, name = displayName, avatarUrl = displayAvatar, email, rule = user.role } }
         });
       }
       catch (Exception ex)
@@ -235,7 +236,7 @@ namespace dotnet.Controllers
 
         // NEW: EF Core
         var user = await _db.accounts.FirstOrDefaultAsync(u => u.refreshtoken == refreshTokenToCheck);
-        if (user == null || user.refreshtokenexpires < DateTime.UtcNow)
+        if (user == null || !user.refreshtokenexpires.HasValue || user.refreshtokenexpires.Value < DateTime.UtcNow)
           return Unauthorized(new { message = "Invalid or expired refresh token" });
 
         var newRefreshToken = GenerateRefreshToken();
@@ -255,7 +256,7 @@ namespace dotnet.Controllers
         };
         Response.Cookies.Append("refreshToken", newRefreshToken, cookieOptions);
 
-        return Ok(new { status = 200, data = new { accessToken = newAccessToken } });
+        return Ok(new { status = 200, data = new { accessToken = newAccessToken, refreshToken = newRefreshToken } });
       }
       catch (Exception ex)
       {

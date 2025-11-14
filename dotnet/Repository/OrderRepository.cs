@@ -1,18 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using be_dotnet_ecommerce1.Data;
-using dotnet.Dtos;
-using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using be_dotnet_ecommerce1.Data;
+using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Repository.IRepository;
-
-// (Đảm bảo đã thêm 2 using này)
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace dotnet.Repository
 {
@@ -26,43 +22,38 @@ namespace dotnet.Repository
 
         public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
         {
-            // Câu SQL của bạn (giữ nguyên)
             var sql = @"
                 SELECT
                     o.id AS ""OrderId"",
                     o.orderdate AS ""OrderDate"",
                     o.statusorder AS ""StatusOrder"",
-                    o.quantity * (
-                        CASE
-                            WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
-                            WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
-                            ELSE v.price
-                        END
+                    SUM(
+                        od.quantity * (
+                            CASE
+                                WHEN d.typediscount = 1 THEN ROUND((v.price * (1 - COALESCE(d.discount, 0)::NUMERIC / 100.0))::NUMERIC)
+                                WHEN d.typediscount = 2 THEN v.price - COALESCE(d.discount, 0)
+                                ELSE v.price
+                            END
+                        )
                     ) AS ""TotalPriceAfterDiscount""
                 FROM orders o
-                JOIN variant v ON o.variant_id = v.id
+                JOIN orderdetail od ON od.order_id = o.id
+                JOIN variant v ON od.variant_id = v.id
                 JOIN product p ON v.product_id = p.id
                 LEFT JOIN discount_product dp ON v.id = dp.variant_id
                 LEFT JOIN discount d ON dp.discount_id = d.id
                     AND o.orderdate BETWEEN d.starttime AND d.endtime
                 WHERE o.account_id = @accountId
+                GROUP BY o.id, o.orderdate, o.statusorder
                 ORDER BY o.id DESC;
             ";
 
             var accountIdParam = new NpgsqlParameter("@accountId", accountId);
 
-            // === SỬA LẠI DÒNG NÀY ===
-            // Thay _connect.Set<OrderHistoryDTO>().FromSqlRaw(...)
             var orders = await _connect.Database
-                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam) // Dùng SqlQueryRaw
+                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
                                    .AsNoTracking()
                                    .ToListAsync();
-            // ======================
-            foreach (var o in orders)
-            {
-                Console.WriteLine($"ID={o.OrderId}, Price={o.TotalPriceAfterDiscount}");
-            }
-
 
             return orders;
         }
@@ -86,8 +77,6 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(o => o.account)
           .Include(o => o.address)
-          .Include(o => o.variant)
-            .ThenInclude(v => v.product)
           .AsQueryable();
 
       if (!string.IsNullOrWhiteSpace(status))
@@ -131,7 +120,7 @@ namespace dotnet.Repository
               o.id == orderId ||
               EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
               EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              EF.Functions.ILike(o.variant.product.nameproduct ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
               EF.Functions.ILike(o.statusorder ?? "", pattern) ||
               EF.Functions.ILike(o.statuspay ?? "", pattern));
         }
@@ -140,7 +129,7 @@ namespace dotnet.Repository
           query = query.Where(o =>
               EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
               EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              EF.Functions.ILike(o.variant.product.nameproduct ?? "", pattern) ||
+              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
               EF.Functions.ILike(o.statusorder ?? "", pattern) ||
               EF.Functions.ILike(o.statuspay ?? "", pattern));
         }
@@ -154,7 +143,20 @@ namespace dotnet.Repository
           .Take(size)
           .ToListAsync();
 
-      var items = orders.Select(MapToDto).ToList();
+      var orderIds = orders.Select(o => o.id).ToList();
+      var detailLookup = await LoadOrderLineLookupAsync(orderIds);
+
+      var items = orders
+        .Select(order =>
+        {
+          detailLookup.TryGetValue(order.id, out var details);
+          IReadOnlyList<dotnet.Model.OrderDetail> normalizedDetails =
+            details != null
+              ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
+              : Array.Empty<dotnet.Model.OrderDetail>();
+          return MapToDto(order, normalizedDetails);
+        })
+        .ToList();
 
       return new PagedResult<OrderAdminDTO>
       {
@@ -171,11 +173,18 @@ namespace dotnet.Repository
           .AsNoTracking()
           .Include(o => o.account)
           .Include(o => o.address)
-          .Include(o => o.variant)
-            .ThenInclude(v => v.product)
           .FirstOrDefaultAsync(o => o.id == orderId);
 
-      return order == null ? null : MapToDto(order);
+      if (order == null) return null;
+
+      var lookup = await LoadOrderLineLookupAsync(new[] { orderId });
+      lookup.TryGetValue(orderId, out var details);
+      IReadOnlyList<dotnet.Model.OrderDetail> normalizedDetails =
+        details != null
+          ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
+          : Array.Empty<dotnet.Model.OrderDetail>();
+
+      return MapToDto(order, normalizedDetails);
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus)
@@ -256,46 +265,216 @@ namespace dotnet.Repository
         }
       }
 
-      var deliveredRevenue = await (from o in _connect.orders.AsNoTracking()
-                                    join v in _connect.variants.AsNoTracking()
-                                      on o.variantid equals v.id
-                                    where o.statusorder == "DELIVERED"
-                                    select new { o.quantity, v.price })
-                                    .ToListAsync();
-
-      summary.Revenue = deliveredRevenue.Sum(item => (long)item.quantity * item.price);
+      summary.Revenue = await (from o in _connect.orders.AsNoTracking()
+                               join od in _connect.orderdetails.AsNoTracking() on o.id equals od.order_id
+                               join v in _connect.variants.AsNoTracking() on od.variant_id equals v.id
+                               where o.statusorder == "DELIVERED"
+                               select (long)od.quantity * v.price)
+                               .SumAsync();
 
       return summary;
     }
 
-    private static OrderAdminDTO MapToDto(dotnet.Model.Order order)
+    private static OrderAdminDTO MapToDto(dotnet.Model.Order order, IReadOnlyList<dotnet.Model.OrderDetail> details)
     {
-      var variant = order.variant;
-      var product = variant?.product;
       var account = order.account;
       var address = order.address;
+
+      var normalizedDetails = details?
+        .Where(d => d != null)
+        .ToList() ?? new List<dotnet.Model.OrderDetail>();
+
+      var primaryDetail = normalizedDetails.FirstOrDefault();
+      var variant = primaryDetail?.variant;
+      var product = variant?.product;
+      var resolvedVariantId = primaryDetail?.variant_id ?? 0;
+      var variantAttributes = ExtractAttributes(variant?.valuevariant);
+      var productSnapshot = BuildProductSnapshot(product, resolvedVariantId, variantAttributes);
+
+      if (productSnapshot == null && primaryDetail != null)
+      {
+        var gallery = product?.imageurls ?? Array.Empty<string>();
+        productSnapshot = new ProductSnapshotDTO
+        {
+          ProductId = product?.id ?? 0,
+          Name = product?.nameproduct ?? string.Empty,
+          Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+          Gallery = gallery,
+          VariantId = resolvedVariantId,
+          VariantAttributes = new Dictionary<string, string>(variantAttributes, StringComparer.OrdinalIgnoreCase)
+        };
+      }
+
+      var items = BuildOrderItems(normalizedDetails);
+      var primaryItem = items.FirstOrDefault();
+
+      var quantity = primaryItem?.Quantity ?? primaryDetail?.quantity ?? 0;
+      if (quantity == 0) quantity = 1;
+
+      var unitPrice = primaryItem?.UnitPrice ?? variant?.price ?? 0;
+      var totalPrice = primaryItem?.TotalPrice ?? unitPrice * quantity;
+      var resolvedAttributes = productSnapshot?.VariantAttributes ?? variantAttributes ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
       return new OrderAdminDTO
       {
         Id = order.id,
         AccountId = order.accountid,
-        VariantId = order.variantid,
+        VariantId = productSnapshot?.VariantId ?? resolvedVariantId,
         CustomerName = $"{(account?.firstname ?? "").Trim()} {(account?.lastname ?? "").Trim()}".Trim(),
         CustomerEmail = account?.email ?? string.Empty,
         CustomerPhone = address?.tel ?? string.Empty,
         ShippingAddress = BuildAddress(address),
-        ProductName = product?.nameproduct ?? string.Empty,
-        ProductImage = product?.imageurls?.FirstOrDefault() ?? string.Empty,
-        VariantAttributes = ExtractAttributes(variant?.valuevariant),
-        Quantity = order.quantity,
-        UnitPrice = variant?.price ?? 0,
-        TotalPrice = (variant?.price ?? 0) * order.quantity,
+        ProductName = productSnapshot?.Name ?? product?.nameproduct ?? string.Empty,
+        ProductImage = productSnapshot?.Thumbnail ?? product?.imageurls?.FirstOrDefault() ?? string.Empty,
+        VariantAttributes = resolvedAttributes,
+        Items = items,
+        Quantity = quantity,
+        UnitPrice = unitPrice,
+        TotalPrice = totalPrice,
         StatusOrder = order.statusorder ?? string.Empty,
         StatusPay = order.statuspay ?? string.Empty,
         TypePay = order.typepay ?? string.Empty,
         OrderDate = order.orderdate,
-        ReceiveDate = order.receivedate
+        ReceiveDate = order.receivedate,
+        Product = productSnapshot
       };
+    }
+
+    private static ProductSnapshotDTO? BuildProductSnapshot(dotnet.Model.Product? product, int variantId, Dictionary<string, string> attributes)
+    {
+      if (product == null)
+      {
+        return null;
+      }
+
+      var gallery = product.imageurls ?? Array.Empty<string>();
+
+      return new ProductSnapshotDTO
+      {
+        ProductId = product.id,
+        Name = product.nameproduct ?? string.Empty,
+        Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+        Gallery = gallery,
+        VariantId = variantId,
+        VariantAttributes = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase)
+      };
+    }
+
+    private static List<OrderAdminItemDTO> BuildOrderItems(IReadOnlyList<dotnet.Model.OrderDetail> details)
+    {
+      if (details == null || details.Count == 0)
+      {
+        return new List<OrderAdminItemDTO>();
+      }
+
+      var items = new List<OrderAdminItemDTO>(details.Count);
+
+      foreach (var detail in details)
+      {
+        if (detail == null) continue;
+
+        var quantity = detail.quantity == 0 ? 1 : detail.quantity;
+        var price = detail.variant?.price ?? 0;
+        var attributes = ExtractAttributes(detail.variant?.valuevariant);
+        var snapshot = BuildProductSnapshot(detail.variant?.product, detail.variant_id, attributes);
+
+        if (snapshot == null)
+        {
+          var gallery = detail.variant?.product?.imageurls ?? Array.Empty<string>();
+          snapshot = new ProductSnapshotDTO
+          {
+            ProductId = detail.variant?.product?.id ?? 0,
+            Name = detail.variant?.product?.nameproduct ?? string.Empty,
+            Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+            Gallery = gallery,
+            VariantId = detail.variant_id,
+            VariantAttributes = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase)
+          };
+        }
+
+        items.Add(new OrderAdminItemDTO
+        {
+          Product = snapshot,
+          Quantity = quantity,
+          UnitPrice = price,
+          TotalPrice = price * quantity
+        });
+      }
+
+      return items;
+    }
+
+    private async Task<Dictionary<int, List<dotnet.Model.OrderDetail>>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, List<dotnet.Model.OrderDetail>>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      await EnsureVariantGraphLoadedAsync(details);
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private async Task EnsureVariantGraphLoadedAsync(List<dotnet.Model.OrderDetail> details)
+    {
+      if (details.Count == 0) return;
+
+      var missingVariantIds = details
+        .Where(od => od.variant == null)
+        .Select(od => od.variant_id)
+        .Distinct()
+        .ToList();
+
+      if (missingVariantIds.Count > 0)
+      {
+        var variantLookup = await _connect.variants
+          .AsNoTracking()
+          .Where(v => missingVariantIds.Contains(v.id))
+          .Include(v => v.product)
+          .ToDictionaryAsync(v => v.id);
+
+        foreach (var detail in details.Where(od => od.variant == null))
+        {
+          if (variantLookup.TryGetValue(detail.variant_id, out var variant))
+          {
+            detail.variant = variant;
+          }
+        }
+      }
+
+      var missingProductIds = details
+        .Select(od => od.variant)
+        .Where(v => v != null && v.product == null)
+        .Select(v => v!.product_id)
+        .Distinct()
+        .ToList();
+
+      if (missingProductIds.Count == 0)
+      {
+        return;
+      }
+
+      var productLookup = await _connect.products
+        .AsNoTracking()
+        .Where(p => missingProductIds.Contains(p.id))
+        .ToDictionaryAsync(p => p.id);
+
+      foreach (var variant in details.Select(od => od.variant).Where(v => v != null && v.product == null))
+      {
+        if (variant != null && productLookup.TryGetValue(variant.product_id, out var product))
+        {
+          variant.product = product;
+        }
+      }
     }
 
     private static string BuildAddress(dotnet.Model.Address? address)

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using be_dotnet_ecommerce1.Data;
 using dotnet.Dtos.admin;
+using dotnet.Model;
 using dotnet.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,93 +20,90 @@ namespace dotnet.Repository
       _connect = connect;
     }
 
-    public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
-        int page,
-        int size,
-        int? rating,
-        bool? updated,
-        string? keyword,
-        DateTime? fromDate,
-        DateTime? toDate)
-    {
-      page = Math.Max(1, page);
-      size = Math.Clamp(size, 1, 100);
-      var offset = (page - 1) * size;
+ public async Task<PagedResult<ReviewAdminDTO>> GetReviewsAsync(
+    int page,
+    int size,
+    int? rating,
+    bool? updated,
+    string? keyword,
+    DateTime? fromDate,
+    DateTime? toDate)
+{
+    page = Math.Max(1, page);
+    size = Math.Clamp(size, 1, 100);
 
-      var query = _connect.reviews
-          .AsNoTracking()
-          .Include(r => r.order)
+    var query = _connect.reviews
+        .AsNoTracking()
+        .Include(r => r.orderdetail)
+            .ThenInclude(od => od.variant)
+                .ThenInclude(v => v.product)
+        .Include(r => r.orderdetail.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
-          .AsQueryable();
+        .AsQueryable();
 
-      if (rating.HasValue)
-      {
+    // -------- Filter ----------
+    if (rating.HasValue)
         query = query.Where(r => r.rating == rating.Value);
-      }
 
-      if (updated.HasValue)
-      {
+    if (updated.HasValue)
         query = query.Where(r => r.isupdated == updated.Value);
-      }
 
-      if (fromDate.HasValue)
-      {
-        var from = DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc);
-        query = query.Where(r => r.createdate >= from);
-      }
+    if (fromDate.HasValue)
+        query = query.Where(r => r.createdate >= fromDate.Value.Date);
 
-      if (toDate.HasValue)
-      {
-        var to = DateTime.SpecifyKind(toDate.Value.Date.AddDays(1), DateTimeKind.Utc);
-        query = query.Where(r => r.createdate < to);
-      }
+    if (toDate.HasValue)
+        query = query.Where(r => r.createdate < toDate.Value.Date.AddDays(1));
 
-      if (!string.IsNullOrWhiteSpace(keyword))
-      {
+    if (!string.IsNullOrWhiteSpace(keyword))
+    {
         var trimmed = keyword.Trim();
         var pattern = $"%{trimmed}%";
+
         query = query.Where(r =>
-            EF.Functions.ILike(r.content ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.account.firstname + " " + r.order.account.lastname, pattern) ||
-            EF.Functions.ILike(r.order.account.email ?? string.Empty, pattern) ||
-            EF.Functions.ILike(r.order.variant.product.nameproduct ?? string.Empty, pattern));
-      }
+            EF.Functions.ILike(r.content ?? "", pattern) ||
+            EF.Functions.ILike(r.orderdetail.order.account.firstname + " " + 
+                               r.orderdetail.order.account.lastname, pattern) ||
+            EF.Functions.ILike(r.orderdetail.order.account.email ?? "", pattern) ||
+            EF.Functions.ILike(r.orderdetail.variant.product.nameproduct ?? "", pattern)
+        );
+    }
 
-      var total = await query.CountAsync();
+    var total = await query.CountAsync();
 
-      var reviews = await query
-          .OrderByDescending(r => r.createdate)
-          .Skip(offset)
-          .Take(size)
-          .ToListAsync();
+    var reviews = await query
+        .OrderByDescending(r => r.createdate)
+        .Skip((page - 1) * size)
+        .Take(size)
+        .ToListAsync();
 
-      var items = reviews.Select(MapToDto).ToList();
+    // Map DTO ----
+    var items = reviews.Select(MapToDto).ToList();
 
-      return new PagedResult<ReviewAdminDTO>
-      {
+    return new PagedResult<ReviewAdminDTO>
+    {
         Items = items,
         Total = total,
         Page = page,
-        Size = size
-      };
-    }
+        Size = size,
+    };
+}
 
-    public async Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId)
-    {
-      var review = await _connect.reviews
-          .AsNoTracking()
-          .Include(r => r.order)
+
+ public async Task<ReviewAdminDTO?> GetReviewDetailAsync(int reviewId)
+{
+    var review = await _connect.reviews
+        .AsNoTracking()
+        .Include(r => r.orderdetail)
+            .ThenInclude(od => od.variant)
+                .ThenInclude(v => v.product)
+        .Include(r => r.orderdetail.order)
             .ThenInclude(o => o.account)
-          .Include(r => r.order)
-            .ThenInclude(o => o.variant)
-              .ThenInclude(v => v.product)
-          .FirstOrDefaultAsync(r => r.id == reviewId);
+        .FirstOrDefaultAsync(r => r.id == reviewId);
 
-      return review == null ? null : MapToDto(review);
-    }
+    if (review == null) return null;
+
+    return MapToDto(review);
+}
 
     public async Task<ReviewAdminSummaryDTO> GetSummaryAsync()
     {
@@ -136,28 +134,61 @@ namespace dotnet.Repository
       return true;
     }
 
-    private static ReviewAdminDTO MapToDto(dotnet.Model.Review review)
-    {
-      var order = review.order;
-      var account = order?.account;
-      var variant = order?.variant;
-      var product = variant?.product;
+   private static ReviewAdminDTO MapToDto(Review review)
+{
+    var orderDetail = review.orderdetail;
+    var variant = orderDetail?.variant;
+    var product = variant?.product;
+    var order = orderDetail?.order;
+    var account = order?.account;
 
-      return new ReviewAdminDTO
-      {
+    var variantAttributes = variant != null
+        ? ExtractAttributes(variant.valuevariant)
+        : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    var customerFirstName = account?.firstname ?? string.Empty;
+    var customerLastName = account?.lastname ?? string.Empty;
+    var customerName = $"{customerFirstName} {customerLastName}".Trim();
+
+    return new ReviewAdminDTO
+    {
         Id = review.id,
-        OrderId = review.orderid,
+        OrderId = order?.id ?? orderDetail?.order_id ?? 0,
         Rating = review.rating,
         Content = review.content ?? string.Empty,
         ImageUrls = review.imageurls?.ToList() ?? new List<string>(),
-        CreateDate = review.createdate ?? DateTime.UtcNow,
-        UpdateDate = review.updatedate ?? review.createdate,
+        CreateDate = review.createdate,
+        UpdateDate = review.updatedate,
         IsUpdated = review.isupdated,
-        CustomerName = $"{(account?.firstname ?? string.Empty).Trim()} {(account?.lastname ?? string.Empty).Trim()}".Trim(),
+
+        CustomerName = customerName,
         CustomerEmail = account?.email ?? string.Empty,
+
         ProductName = product?.nameproduct ?? string.Empty,
         ProductImage = product?.imageurls?.FirstOrDefault() ?? string.Empty,
-        VariantAttributes = ExtractAttributes(variant?.valuevariant)
+        VariantAttributes = new Dictionary<string, string>(variantAttributes, StringComparer.OrdinalIgnoreCase),
+
+        Product = BuildProductSnapshot(product, variant?.id ?? 0, variantAttributes)
+    };
+}
+
+    private static ProductSnapshotDTO? BuildProductSnapshot(dotnet.Model.Product? product, int variantId, Dictionary<string, string> attributes)
+    {
+      if (product == null)
+      {
+        return null;
+      }
+
+      var gallery = product.imageurls ?? Array.Empty<string>();
+
+      return new ProductSnapshotDTO
+      {
+        ProductId = product.id,
+        Name = product.nameproduct ?? string.Empty,
+        Thumbnail = gallery.FirstOrDefault() ?? string.Empty,
+        Gallery = gallery,
+        VariantId = variantId,
+        VariantAttributes = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase)
       };
     }
 
@@ -190,6 +221,79 @@ namespace dotnet.Repository
       }
 
       return result;
+    }
+
+    private async Task<Dictionary<int, List<dotnet.Model.OrderDetail>>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
+    {
+      var ids = orderIds.Distinct().ToList();
+      if (ids.Count == 0) return new Dictionary<int, List<dotnet.Model.OrderDetail>>();
+
+      var details = await _connect.orderdetails
+        .AsNoTracking()
+        .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.variant!)
+          .ThenInclude(v => v.product)
+        .OrderBy(od => od.id)
+        .ToListAsync();
+
+      await EnsureVariantGraphLoadedAsync(details);
+
+      return details
+        .GroupBy(od => od.order_id)
+        .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private async Task EnsureVariantGraphLoadedAsync(List<dotnet.Model.OrderDetail> details)
+    {
+      if (details.Count == 0) return;
+
+      var missingVariantIds = details
+        .Where(od => od.variant == null)
+        .Select(od => od.variant_id)
+        .Distinct()
+        .ToList();
+
+      if (missingVariantIds.Count > 0)
+      {
+        var variantLookup = await _connect.variants
+          .AsNoTracking()
+          .Where(v => missingVariantIds.Contains(v.id))
+          .Include(v => v.product)
+          .ToDictionaryAsync(v => v.id);
+
+        foreach (var detail in details.Where(od => od.variant == null))
+        {
+          if (variantLookup.TryGetValue(detail.variant_id, out var variant))
+          {
+            detail.variant = variant;
+          }
+        }
+      }
+
+      var missingProductIds = details
+        .Select(od => od.variant)
+        .Where(v => v != null && v.product == null)
+        .Select(v => v!.product_id)
+        .Distinct()
+        .ToList();
+
+      if (missingProductIds.Count == 0)
+      {
+        return;
+      }
+
+      var productLookup = await _connect.products
+        .AsNoTracking()
+        .Where(p => missingProductIds.Contains(p.id))
+        .ToDictionaryAsync(p => p.id);
+
+      foreach (var variant in details.Select(od => od.variant).Where(v => v != null && v.product == null))
+      {
+        if (variant != null && productLookup.TryGetValue(variant.product_id, out var product))
+        {
+          variant.product = product;
+        }
+      }
     }
   }
 }

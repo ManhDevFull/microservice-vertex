@@ -16,5 +16,9 @@ namespace dotnet.Dtos.admin
     public string ProductName { get; set; } = string.Empty;
     public string ProductImage { get; set; } = string.Empty;
     public Dictionary<string, string> VariantAttributes { get; set; } = new();
+<<<<<<< HEAD
+=======
+    public ProductSnapshotDTO? Product { get; set; }
+>>>>>>> 337f3c50ea813517e90e1dd2cf24129c526ddc69
   }
 }

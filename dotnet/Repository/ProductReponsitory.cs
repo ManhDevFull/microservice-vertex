@@ -134,13 +134,19 @@ namespace dotnet.Repository
         if (stock.Value)
         {
           q = from p in q
-              where _connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where _connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
         else
         {
           q = from p in q
-              where !_connect.variants.Any(v => v.productid == p.product_id && v.stock > 0)
+              where !_connect.variants.Any(v =>
+                v.product_id == p.product_id &&
+                v.stock > 0 &&
+                !v.isdeleted)
               select p;
         }
       }
@@ -216,7 +222,7 @@ namespace dotnet.Repository
         {
           var newVariant = new Variant
           {
-            productid = product.id,
+            product_id = product.id,
             valuevariant = BuildJsonDocument(variant.valuevariant),
             stock = variant.stock,
             inputprice = variant.inputprice,
@@ -296,11 +302,9 @@ namespace dotnet.Repository
 
     public async Task<ProductAdminDTO?> GetProductAdminByIdAsync(int productId)
     {
-      var sql = $"SELECT * FROM ({ConnectData.ProductAdminSql}) AS product_admin WHERE product_id = {{0}}";
-      return await _connect.Set<ProductAdminDTO>()
-        .FromSqlRaw(sql, productId)
+      return await _connect.productAdmins
         .AsNoTracking()
-        .FirstOrDefaultAsync();
+        .FirstOrDefaultAsync(p => p.product_id == productId);
     }
 
     public async Task<ProductAdminDTO?> CreateVariantAsync(int productId, VariantAdminCreateRequest request)
@@ -311,7 +315,7 @@ namespace dotnet.Repository
       var now = DateTime.UtcNow;
       var variant = new Variant
       {
-        productid = productId,
+        product_id = productId,
         valuevariant = BuildJsonDocument(request.valuevariant),
         stock = request.stock,
         inputprice = request.inputprice,
@@ -332,7 +336,7 @@ namespace dotnet.Repository
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
 
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
       if (variant == null) return null;
 
       var now = DateTime.UtcNow;
@@ -361,7 +365,7 @@ namespace dotnet.Repository
       var product = await _connect.products.FirstOrDefaultAsync(p => p.id == productId && !p.isdeleted);
       if (product == null) return null;
 
-      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.productid == productId && !v.isdeleted);
+      var variant = await _connect.variants.FirstOrDefaultAsync(v => v.id == variantId && v.product_id == productId && !v.isdeleted);
       if (variant == null) return null;
 
       var now = DateTime.UtcNow;
