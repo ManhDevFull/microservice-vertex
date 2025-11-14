@@ -252,5 +252,15 @@ namespace be_dotnet_ecommerce1.Repository
 
       return false;
     }
+    public async Task<List<V_CategoryDTO>> getAllCategory()
+    {
+        var rs = await _connect.Set<V_Category>().Where(v=>v.key == "category")
+        .Select(d => new V_CategoryDTO
+        {
+          key = d.key,
+          values = d.values
+        }).ToListAsync();
+        return rs;
+    }
   }
 }

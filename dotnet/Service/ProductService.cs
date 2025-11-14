@@ -29,11 +29,91 @@ namespace dotnet.Service
       return paged;
     }
 
-    public async Task<List<ProductFilterDTO>> getProductByFilter(FilterDTO dTO)
+  public async Task<PagedResultDTO<ProductFilterDTO>> getProductByFilter(FilterDTO dTO)
     {
-      var result = await _repo.GetProductByFilter(dTO);
-      return result;
+      var conditions = new List<string>();
+      var baseSql = @"FROM v_products_filter view";
+      if (dTO.Filter != null)
+      {
+        foreach (var item in dTO.Filter)
+        {
+          var key = item.Key;
+          if (key == "price")
+          {
+            if (item.Value.Count() == 2)
+            {
+              var min = item.Value[0];
+              var max = item.Value[1];
+              //conditions.Add($"v.price BETWEEN {min} AND {max}");
+              conditions.Add($@"exists (
+                select 1 
+                from jsonb_array_elements(view.variant) as elem
+                WHERE (elem->'price')::numeric BETWEEN {min} AND {max}
+              )");
+            }
+          }
+          else
+          {
+            var values = string.Join(",", item.Value.Select(v => $"'{v}'"));
+            if (key == "brand")
+              conditions.Add($"view.brand IN ({values})");
+            else if (key == "namecategory")
+              conditions.Add($"view.categoryName  IN ({values})");
+            else
+              //conditions.Add($"v.valuevariant ->> '{key}' IN ({values})");
+              conditions.Add($@" exists (
+                select 1 
+                from jsonb_array_elements(view.variant) as elem
+                WHERE ((elem->'valuevariant')->>'{key}') IN ({values})
+            )");
+          }
+        }
+      }
+      // nối where
+      if (dTO.query != "")
+        conditions.Add($"name ILIKE '%{dTO.query}%'");
+      string wheresql = "";
+      if (conditions.Any())
+        wheresql = " where " + string.Join(" and ", conditions);
+      // đếm số lượng sản phẩm
+      var sqlcountProduct = $"select count(distinct view.id) as \"Value\" {baseSql} {wheresql}"; // cần phải có tên cột là value
+      // lấy sản phẩm 
+      var sqlData = $@"select distinct view.*
+      {baseSql}
+      {wheresql}
+      order by view.id
+      offset {(dTO.pageNumber - 1) * dTO.pageSize} rows 
+      fetch next  {dTO.pageSize} rows only"; // rowns only
+
+      // thực thi sql
+      var totalCount = await _repo.countProductBySql(sqlcountProduct); // đếm số lương sản phẩm
+      
+      var products = await _repo.getProductBySql(sqlData); // lấy sản phẩm bằng sql
+
+      // nếu không có sản phẩm nào
+      if (totalCount == 0 || !products.Any())
+      {
+        return new PagedResultDTO<ProductFilterDTO>
+        {
+          Items = new List<ProductFilterDTO>(),
+          TotalCount = 0,
+          TotalPage = 0,
+          PageNumber = dTO.pageNumber,
+          PageSize = dTO.pageSize
+        };
+      }
+
+      var totalPage = (int)Math.Ceiling(totalCount / (double)dTO.pageSize);
+      return new PagedResultDTO<ProductFilterDTO>
+      {
+        Items = products,
+        TotalCount = totalCount,
+        TotalPage = totalPage,
+        PageNumber = dTO.pageNumber,
+        PageSize = dTO.pageSize
+      };
     }
+
 
 
     public int getQuantityByIdCategory(int id)

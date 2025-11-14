@@ -279,6 +279,12 @@ namespace dotnet.Repository
     {
       var account = order.account;
       var address = order.address;
+      var resolvedVariantId = primaryDetail?.variant_id ?? 0;
+      var quantity = primaryDetail?.quantity ?? 0;
+      if (quantity == 0) quantity = 1;
+
+      var unitPrice = variant?.price ?? 0;
+      var totalPrice = unitPrice * quantity;
 
       var normalizedDetails = details?
         .Where(d => d != null)

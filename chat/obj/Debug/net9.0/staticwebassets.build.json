@@ -1,12 +1,1 @@
-{
-  "Version": 1,
-  "Hash": "CtyoBW2/o/I5vDQpx1Jk0TpELdmbYlvF3cf+kESCCQA=",
-  "Source": "chat",
-  "BasePath": "_content/chat",
-  "Mode": "Default",
-  "ManifestType": "Build",
-  "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
-  "Assets": [],
-  "Endpoints": []
-}
+{"Version":1,"Hash":"CtyoBW2/o/I5vDQpx1Jk0TpELdmbYlvF3cf+kESCCQA=","Source":"chat","BasePath":"_content/chat","Mode":"Default","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}

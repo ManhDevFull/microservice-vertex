@@ -14,15 +14,23 @@ namespace be_dotnet_ecommerce1.Service
             _repo = repo;
         }
 
-        public async Task<List<VariantFilterDTO>> getValueVariant(int id)
+        public async Task<List<VariantFilterDTO>> getValueVariant()
         {
-            return await _repo.GetValueVariant(id);
+            return await _repo.GetValueVariant();
         }
-
-
+        public async Task<List<V_VariantFilterDTO>> getAllVariant()
+        {
+            return await _repo.getAllVariant();
+        }
         public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO)
         {
-            return await _repo.GetVariantByFilter(dTO);
+            // return await _repo.GetVariantByFilter(dTO);
+            return null;
+        }
+        public async Task<List<VariantFilterDTO>> getValueVariantByNameCategory(string? name)
+        {
+            var rs = await _repo.GetValueVariantByNameCategory(name);
+            return rs;
         }
     }
 }

@@ -1,3 +1,5 @@
+using be_dotnet_ecommerce1.Model;
+
 namespace dotnet.Model
 {
   public class Product

@@ -32,6 +32,11 @@ namespace be_dotnet_ecommerce1.Data
         public DbSet<UserAdminDTO> userAdmins { get; set; } = null!;
         public DbSet<ProductAdminDTO> productAdmins { get; set; } = null!;
 
+        /// view
+        public DbSet<V_ProductFilter> v_ProductFilters { get; set; }
+        public DbSet<V_variant> v_Variants { get; set; }
+        // v_category
+        public DbSet<V_Category> v_Categories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // -------- account --------
@@ -52,7 +57,7 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.refreshtoken).HasColumnName("refreshtoken");
                 e.Property(x => x.refreshtokenexpires).HasColumnName("refreshtokenexpires");
             });
-            
+
             // -------- address --------
             modelBuilder.Entity<Address>(e =>
             {
@@ -309,7 +314,24 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.min_price).HasColumnName("min_price");
                 e.Property(x => x.max_price).HasColumnName("max_price");
             });
-
+            // view v_product_filter
+            modelBuilder.Entity<V_ProductFilter>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("v_products_filter");
+            });
+            // view V_variant
+            modelBuilder.Entity<V_variant>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("v_variantbycategory");
+            });
+            // view v_category
+            modelBuilder.Entity<V_Category>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("v_variant_filters");
+            });
             base.OnModelCreating(modelBuilder);
         }
     }
