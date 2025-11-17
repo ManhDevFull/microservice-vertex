@@ -189,3 +189,15 @@
 /run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/obj/Debug/net9.0/dotnet.pdb
 /run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/obj/Debug/net9.0/dotnet.genruntimeconfig.cache
 /run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/obj/Debug/net9.0/ref/dotnet.dll
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.csproj.AssemblyReference.cache
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\rpswa.dswa.cache.json
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.GeneratedMSBuildEditorConfig.editorconfig
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.AssemblyInfoInputs.cache
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.AssemblyInfo.cs
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.csproj.CoreCompileInputs.cache
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.MvcApplicationPartsAssemblyInfo.cs
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.MvcApplicationPartsAssemblyInfo.cache
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.sourcelink.json
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.dll
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\refint\dotnet.dll
+D:\ecommerce-vertex\microservice-vertex\dotnet\obj\Debug\net9.0\dotnet.pdb
