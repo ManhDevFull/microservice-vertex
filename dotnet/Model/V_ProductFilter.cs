@@ -1,9 +1,6 @@
-
-using dotnet.Model;
-
-namespace dotnet.Dtos
+namespace dotnet.Model
 {
-    public class ProductFilterDTO
+    public class V_ProductFilter
     {
         public int id { get; set; }
         public string? name { get; set; }
@@ -13,7 +10,7 @@ namespace dotnet.Dtos
         public string? categoryName { get; set; }
         public List<string>? imgUrls { get; set; }
         //public int totalStock { get; set; }
-        public List<VariantDTO>? variant { get; set; }
+        public string? variant { get; set; }
         public int rating { get; set; }
         public int order { get; set; }
     }

@@ -293,7 +293,7 @@ namespace dotnet.Controllers
         _logger.LogError("Verify service base URL is not configured.");
         return StatusCode(500, new { message = "OTP service is not configured." });
       }
-_logger.LogInformation("Verify baseUrl = `{BaseUrl}`", baseUrl);
+      _logger.LogInformation("Verify baseUrl = `{BaseUrl}`", baseUrl);
 
       try
       {

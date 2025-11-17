@@ -6,6 +6,7 @@ using be_dotnet_ecommerce1.Data;
 using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
+using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
@@ -135,8 +136,8 @@ namespace be_dotnet_ecommerce1.Repository
           if (conflict)
             throw new InvalidOperationException("Another category with the same name already exists under the selected parent.");
 
-            category.namecategory = trimmed;
-            hasChanges = true;
+          category.namecategory = trimmed;
+          hasChanges = true;
         }
       }
 
@@ -251,6 +252,17 @@ namespace be_dotnet_ecommerce1.Repository
       }
 
       return false;
+    }
+
+    public async Task<List<V_CategoryDTO>> getAllCategory()
+    {
+      var rs = await _connect.Set<V_Category>().Where(v => v.key == "category")
+      .Select(d => new V_CategoryDTO
+      {
+        key = d.key,
+        values = d.values
+      }).ToListAsync();
+      return rs;
     }
   }
 }

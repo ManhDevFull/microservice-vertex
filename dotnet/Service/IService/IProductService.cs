@@ -8,8 +8,7 @@ namespace be.Service.IService
   public interface IProductService
   {
 
-    public int getQuantityByIdCategory(int id);
-    public Task<List<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
+    public Task<PagedResultDTO<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
     public Task<PagedResult<ProductAdminDTO>> getProductAdmin(
     int page,
     int size,

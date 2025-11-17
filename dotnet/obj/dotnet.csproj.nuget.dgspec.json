@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/dotnet.csproj": {}
+    "D:\\ecommerce-vertex\\microservice-vertex\\dotnet\\dotnet.csproj": {}
   },
   "projects": {
-    "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/dotnet.csproj": {
+    "D:\\ecommerce-vertex\\microservice-vertex\\dotnet\\dotnet.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/dotnet.csproj",
+        "projectUniqueName": "D:\\ecommerce-vertex\\microservice-vertex\\dotnet\\dotnet.csproj",
         "projectName": "dotnet",
-        "projectPath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/dotnet.csproj",
-        "packagesPath": "/home/manh/.nuget/packages/",
-        "outputPath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/dotnet/obj/",
+        "projectPath": "D:\\ecommerce-vertex\\microservice-vertex\\dotnet\\dotnet.csproj",
+        "packagesPath": "C:\\Users\\HIEU\\.nuget\\packages\\",
+        "outputPath": "D:\\ecommerce-vertex\\microservice-vertex\\dotnet\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/manh/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\HIEU\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -38,7 +44,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.100"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
@@ -135,7 +141,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.109/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
