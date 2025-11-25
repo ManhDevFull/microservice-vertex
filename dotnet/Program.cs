@@ -26,6 +26,8 @@ using be.Service.IService;
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://localhost:5200");
+
 
 builder.WebHost.ConfigureKestrel(options =>
 {

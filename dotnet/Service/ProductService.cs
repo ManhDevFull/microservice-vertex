@@ -149,5 +149,32 @@ namespace dotnet.Service
     {
       return _repo.DeleteVariantAsync(productId, variantId);
     }
+    // lấy ra 4 sản phẩm có giảm giá
+    public async Task<ICollection<ProductFilterDTO>> getProductsHaveDiscount()
+    {
+      var sql = @"SELECT *
+        FROM v_products_filter v
+        WHERE EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(v.variant) AS var(variant)
+            JOIN LATERAL jsonb_array_elements(var.variant->'discounts') AS d(discount) ON TRUE
+            -- WHERE (d.discount->>'endtime')::timestamp > NOW()
+        )
+        LIMIT 4;";
+      var rs = await _repo.getProductBySql(sql);
+      return rs;
+    }
+// lấy ra sản phẩm có lượng mua nhiều nhất
+    public async Task<ICollection<ProductFilterDTO>> getTop1ProductByOrder()
+    {
+       var sql = @"
+              SELECT *
+              FROM v_products_filter
+              ORDER BY ""order"" DESC
+              LIMIT 1
+          ";
+      var rs = await _repo.getProductBySql(sql);
+      return rs;
+    }
   }
 }

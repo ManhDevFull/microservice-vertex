@@ -1,19 +1,23 @@
 using System.Linq;
 using System.Threading.Tasks;
+using be.Service.IService;
 using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Service;
 
 namespace be_dotnet_ecommerce1.Service.IService
 {
   public class CategoryService : ICategoryService
   {
     private readonly ICategoryRepository _repo;
-    public CategoryService(ICategoryRepository repo)
+    private readonly IProductService _productservice;
+    public CategoryService(ICategoryRepository repo, IProductService productService)
     {
       _repo = repo;
+      _productservice = productService;
     }
 
     public List<CategoryAdminDTO> getCategoryAdmin()
@@ -43,5 +47,12 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       return await _repo.getAllCategory();
     }
+    public async Task<List<CategoryDTO>> getCategoriesBySql(string sql)
+    {
+      // lấy ra sản phẩm có lượt order nhiefu nhất->lấy ra được id cate tương ướng
+      return null;
+    }
+    // lấy ra các cate con
+
   }
 }
