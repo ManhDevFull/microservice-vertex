@@ -15,15 +15,7 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       _repo = repo;
     }
-    public List<CategoryDTO> getCategoryParentById(int? id)
-    {
-      var list = _repo.getParentById(id).Select(c => new CategoryDTO
-      {
-        _id = c.id,
-        name_category = c.namecategory
-      }).ToList();
-      return list;
-    }
+
     public List<CategoryAdminDTO> getCategoryAdmin()
     {
       var list = _repo.getCategoryAdmin();
@@ -45,6 +37,11 @@ namespace be_dotnet_ecommerce1.Service.IService
     public Task<bool> DeleteCategoryAsync(int categoryId)
     {
       return _repo.DeleteCategoryAsync(categoryId);
+    }
+
+    public async Task<List<V_CategoryDTO>> getAllCategory()
+    {
+      return await _repo.getAllCategory();
     }
   }
 }

@@ -39,5 +39,43 @@ namespace dotnet.Controllers
                 return StatusCode(500, new { message = "Lỗi server khi lấy lịch sử đơn hàng." });
             }
         }
+
+        [HttpGet("my-orders/{orderId}")]
+        public async Task<IActionResult> GetMyOrderDetail(int orderId)
+        {
+            // 1. Lấy userId từ Token
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized("Không thể xác định người dùng.");
+            }
+
+            try
+            {
+                // 2. Gọi Service lấy chi tiết
+                var orderDetail = await _orderService.GetOrderDetailAsync(orderId);
+
+                // 3. Kiểm tra tồn tại
+                if (orderDetail == null)
+                {
+                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
+                }
+
+                // 4. QUAN TRỌNG: Kiểm tra bảo mật (Chỉ xem đơn của chính mình)
+                if (orderDetail.AccountId != userId)
+                {
+                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
+                }
+
+                // 5. Trả về
+                return Ok(orderDetail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy chi tiết đơn hàng {OrderId} cho User ID {UserId}", orderId, userId);
+                return StatusCode(500, new { message = "Lỗi server khi lấy chi tiết đơn hàng." });
+            }
+        }
+           
     }
 }

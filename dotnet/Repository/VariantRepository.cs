@@ -1,10 +1,12 @@
 using be_dotnet_ecommerce1.Controllers;
 using be_dotnet_ecommerce1.Data;
 using be_dotnet_ecommerce1.Dtos;
+using dotnet.Dtos;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Text;
+using System.Text.Json;
 
 namespace be_dotnet_ecommerce1.Repository.IRepository
 {
@@ -15,134 +17,45 @@ namespace be_dotnet_ecommerce1.Repository.IRepository
         {
             _connect = connect;
         }
-        public async Task<List<VariantFilterDTO>> GetValueVariant(int id)
-        {
-            var data = await _connect.Database
-        .SqlQueryRaw<VariantFilterDTO>(@"
-    SELECT 
-                key, 
-                array_agg(DISTINCT value ORDER BY value) AS values
-            FROM (
-                -- Lấy các thuộc tính từ valuevariant
-                SELECT 
-                    kv.key::text AS key, 
-                    kv.value::text AS value
-                FROM category 
-                JOIN product ON category.id = product.category
-                JOIN variant ON product.id = variant.product_id
-                CROSS JOIN LATERAL jsonb_each_text(variant.valuevariant) AS kv(key, value)
-                WHERE category.id = {0} 
-                AND variant.isdeleted = false
-                AND product.isdeleted = false
-                
-                UNION ALL
-                
-                -- Thêm giá như một thuộc tính
-                SELECT 
-                    'price' AS key,
-                    v.price::text AS value
-                FROM category c
-                JOIN product p ON c.id = p.category
-                JOIN variant v ON p.id = v.product_id
-                WHERE c.id = {0}
-                AND v.isdeleted = false
-                AND p.isdeleted = false
-            ) AS combined
-            GROUP BY key
-            ORDER BY key;", id, id)
-        .ToListAsync();
 
+         public async Task<List<V_VariantFilterDTO>> getAllVariant() // lấy ra tất cả các variant từ view from v_variant_filters
+        {
+            var data = await _connect.Database.SqlQueryRaw<V_VariantFilterDTO>(@"SELECT * from v_variant_filters")
+            .ToListAsync();
             return data;
         }
-        public async Task<List<Variant>> GetVariantByFilter(FilterDTO dTO)
+        public async Task<List<VariantFilterDTO>> GetValueVariant()
         {
-            var sql = new StringBuilder(@"
-SELECT v.*
-FROM variant v
-JOIN product p ON p.id = v.product_id
-WHERE NOT v.isdeleted
-  AND NOT p.isdeleted");
-            var parameters = new List<NpgsqlParameter>();
-            var paramIndex = 0;
+            var data = await _connect.Database.SqlQueryRaw<VariantFilterDTO>(@"SELECT * from v_variant_filters").ToListAsync();
+            return data;
+        }
+   public async Task<List<VariantFilterDTO>> GetValueVariantByNameCategory(string? name)
+        {
+            // Bắt đầu một IQueryable, chưa thực thi
+            var query = _connect.Set<V_variant>().AsQueryable();
 
-            if (dTO.Filter != null)
+            // 1. Làm sạch và kiểm tra đầu vào
+            if (!string.IsNullOrEmpty(name))
             {
-                foreach (var entry in dTO.Filter)
-                {
-                    var key = entry.Key?.Trim();
-                    var values = entry.Value?
-                        .Where(v => !string.IsNullOrWhiteSpace(v))
-                        .ToArray();
-
-                    if (string.IsNullOrWhiteSpace(key) || values == null || values.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    if (key.Equals("price", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var priceValues = values
-                            .Select(v => int.TryParse(v.Trim(), out var parsed) ? parsed : (int?)null)
-                            .Where(v => v.HasValue)
-                            .Select(v => v!.Value)
-                            .Distinct()
-                            .ToArray();
-
-                        if (priceValues.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        var placeholders = new List<string>();
-                        foreach (var price in priceValues)
-                        {
-                            var paramName = $"p{paramIndex++}";
-                            parameters.Add(new NpgsqlParameter(paramName, price));
-                            placeholders.Add($"@{paramName}");
-                        }
-
-                        sql.Append($" AND v.price IN ({string.Join(", ", placeholders)})");
-                        continue;
-                    }
-
-                    var allowedValues = values
-                        .Select(v => v.Trim())
-                        .Where(v => v.Length > 0)
-                        .Distinct()
-                        .ToArray();
-
-                    if (allowedValues.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    var valuePlaceholders = new List<string>();
-                    foreach (var value in allowedValues)
-                    {
-                        var paramName = $"p{paramIndex++}";
-                        parameters.Add(new NpgsqlParameter(paramName, value));
-                        valuePlaceholders.Add($"@{paramName}");
-                    }
-
-                    var escapedKey = key.Replace("'", "''");
-                    sql.Append($" AND (v.valuevariant ->> '{escapedKey}') IN ({string.Join(", ", valuePlaceholders)})");
-                }
+                var cleanedName = name.Trim(); // Loại bỏ khoảng trắng/ký tự xuống dòng
+                                               // 2. Thêm điều kiện WHERE một cách an toàn
+                query = query.Where(v => v.namecategory == cleanedName);
             }
 
-            var parameterArray = parameters.Count > 0
-                ? parameters.Cast<object>().ToArray()
-                : Array.Empty<object>();
+            // 3. Thực thi truy vấn (EF Core tự động tạo SQL an toàn)
+            var dataRow = await query.ToListAsync();
 
-            var query = parameters.Count > 0
-                ? _connect.variants.FromSqlRaw(sql.ToString(), parameterArray)
-                : _connect.variants.FromSqlRaw(sql.ToString());
-
-            var result = await query
-                .AsNoTracking()
-                .ToListAsync();
-
-            return result;
+            // 4. Ánh xạ kết quả (phần này vẫn giữ nguyên)
+            var rs = dataRow.Select(r => new VariantFilterDTO
+            {
+                id = r.id,
+                namecategory = r.namecategory,
+                brand = r.brand,
+                variant = string.IsNullOrEmpty(r.variant)
+                    ? null
+                    : JsonSerializer.Deserialize<List<Dictionary<string, string[]>>>(r.variant)?.FirstOrDefault()
+            }).ToList();
+            return rs;
         }
-
     }
 }
