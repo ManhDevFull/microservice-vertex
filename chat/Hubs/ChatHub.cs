@@ -74,6 +74,30 @@ public class ChatHub : Hub
           isRead = false
         });
   }
+  public async Task MarkThreadRead(int contactId)
+  {
+    if (contactId <= 0)
+      throw new HubException("Invalid contact id.");
+
+    var userId = GetUserId();
+
+    var updated = await _db.Messages
+      .Where(m =>
+        m.sender_id == contactId &&
+        m.receiver_id == userId &&
+        !m.is_read)
+      .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.is_read, _ => true));
+
+    if (updated > 0)
+    {
+      await Clients.User(contactId.ToString())
+        .SendAsync("messagesRead", new
+        {
+          contactId = userId,
+          updated
+        });
+    }
+  }
   public async Task SendMessageByClient(string content)
   {
     var senderId = GetUserId();
