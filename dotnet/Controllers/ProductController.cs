@@ -27,6 +27,12 @@ namespace dotnet.Controllers
             var result = await _service.getProductByFilter(dTO);
             return Ok(result);
         }
+        [HttpGet("discount")]
+        public async Task<IActionResult> getProductDiscount()
+        {
+            var rs = await _service.getProductsHaveDiscount();
+            return Ok(rs);
+        }
 
     }
 }

@@ -22,10 +22,6 @@ namespace dotnet.Repository
       _connect = connect;
       variantRepository = new VariantRepository(_connect);
     }
-
-
-
-
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
         int page,
         int size,

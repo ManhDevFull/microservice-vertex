@@ -5,6 +5,7 @@ using be_dotnet_ecommerce1.Model;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Service;
 
 namespace be_dotnet_ecommerce1.Service.IService
 {
@@ -43,5 +44,13 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       return await _repo.getAllCategory();
     }
+
+    public async Task<List<CategoryDTO>> getCategoriesBySql(string sql)
+    {
+        // lấy ra sản phẩm có lượt order nhiefu nhất->lấy ra được id cate tương ướng
+        
+    }
+    // lấy ra các cate con
+
   }
 }
