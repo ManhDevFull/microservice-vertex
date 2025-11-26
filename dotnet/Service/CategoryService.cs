@@ -47,12 +47,15 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       return await _repo.getAllCategory();
     }
-    public async Task<List<CategoryDTO>> getCategoriesBySql(string sql)
+    public async Task<ICollection<CategoryDTO>> getCategoriesParent()
     {
       // lấy ra sản phẩm có lượt order nhiefu nhất->lấy ra được id cate tương ướng
-      return null;
+      var topProductByOrder = await _productservice.getTop1ProductByOrder();
+      // lấy ra id cate tương ứng
+      var idCate = topProductByOrder.categoryId;
+      var rs = await _repo.getCateById(idCate); // lấy ra các category với idcate
+      return rs;
     }
-    // lấy ra các cate con
 
   }
 }
