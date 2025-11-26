@@ -6,17 +6,18 @@ using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Service.IService;
 using be.Service.IService;
 using dotnet.Dtos.admin;
+using be_dotnet_ecommerce1.Repository.IReopsitory;
 
 namespace dotnet.Service
 {
   public class ProductService : IProductService
   {
     private readonly IProductReponsitory _repo;
-    private readonly ICategoryService _cateservice;
-    public ProductService(IProductReponsitory repo, ICategoryService cateservice)
+    private readonly ICategoryRepository _categoryRepository;
+    public ProductService(IProductReponsitory repo, ICategoryRepository categoryRepository)
     {
       _repo = repo;
-      _cateservice = cateservice;
+      _categoryRepository = categoryRepository;
     }
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
         int page,
@@ -182,7 +183,9 @@ namespace dotnet.Service
     // lấy theo idparent của category
     public async Task<ICollection<ProductFilterDTO>> getProductFrequently()
     {
-      var categories = await _cateservice.getCategoriesParent();
+      var topProductByOrder = await getTop1ProductByOrder(); // lấy sản phẩm có lượng mua nhiều nhất
+      // lấy ra các category con (category có idparent  = topProductByOrder.categoryId)
+      var categories = await _categoryRepository.getCateById(topProductByOrder.categoryId);
       // lấy ra danh sách id category con 
       var idcate = categories.Select(c => c._id).ToList();
       // chuển thành chuỗi
@@ -190,7 +193,7 @@ namespace dotnet.Service
       var sql = $@"
           SELECT * from v_products_filter
           WHERE categoryid IN ({inClause})
-          LIMIT 12
+          LIMIT 8
         ";
       var products = await _repo.getProductBySql(sql);
       return products;

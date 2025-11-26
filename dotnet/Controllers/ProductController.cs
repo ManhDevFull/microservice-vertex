@@ -36,15 +36,14 @@ namespace dotnet.Controllers
         [HttpGet("frequently")]
         public async Task<IActionResult> getFrequentlyProduct()
         {
-            var mainProductTask = _service.getTop1ProductByOrder();
-            var accompanyingTask = _service.getProductFrequently();
+            var mainProductTask = await _service.getTop1ProductByOrder();
+            var accompanyingTask = await _service.getProductFrequently();
 
-            await Task.WhenAll(mainProductTask, accompanyingTask);
 
             var result = new
             {
-                main = mainProductTask.Result,
-                accompanying = accompanyingTask.Result
+                main = mainProductTask,
+                accompanying = accompanyingTask
             };
             return Ok(result);
         }
