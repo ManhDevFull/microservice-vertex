@@ -33,6 +33,20 @@ namespace dotnet.Controllers
             var rs = await _service.getProductsHaveDiscount();
             return Ok(rs);
         }
+        [HttpGet("frequently")]
+        public async Task<IActionResult> getFrequentlyProduct()
+        {
+            var mainProductTask = _service.getTop1ProductByOrder();
+            var accompanyingTask = _service.getProductFrequently();
 
+            await Task.WhenAll(mainProductTask, accompanyingTask);
+
+            var result = new
+            {
+                main = mainProductTask.Result,
+                accompanying = accompanyingTask.Result
+            };
+            return Ok(result);
+        }
     }
 }

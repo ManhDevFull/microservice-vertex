@@ -12,9 +12,11 @@ namespace dotnet.Service
   public class ProductService : IProductService
   {
     private readonly IProductReponsitory _repo;
-    public ProductService(IProductReponsitory repo)
+    private readonly ICategoryService _cateservice;
+    public ProductService(IProductReponsitory repo, ICategoryService cateservice)
     {
       _repo = repo;
+      _cateservice = cateservice;
     }
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
         int page,
@@ -164,17 +166,35 @@ namespace dotnet.Service
       var rs = await _repo.getProductBySql(sql);
       return rs;
     }
-// lấy ra sản phẩm có lượng mua nhiều nhất
-    public async Task<ICollection<ProductFilterDTO>> getTop1ProductByOrder()
+    // lấy ra sản phẩm có lượng mua nhiều nhất
+    public async Task<ProductFilterDTO> getTop1ProductByOrder()
     {
-       var sql = @"
+      var sql = @"
               SELECT *
               FROM v_products_filter
               ORDER BY ""order"" DESC
               LIMIT 1
           ";
       var rs = await _repo.getProductBySql(sql);
-      return rs;
+      return rs.FirstOrDefault();
+    }
+    // lấy ra các sản phẩm liên quan với sản phẩm có lượng mua nhiều nhât
+    // lấy theo idparent của category
+    public async Task<ICollection<ProductFilterDTO>> getProductFrequently()
+    {
+      var categories = await _cateservice.getCategoriesParent();
+      // lấy ra danh sách id category con 
+      var idcate = categories.Select(c => c._id).ToList();
+      // chuển thành chuỗi
+      var inClause = string.Join(",", idcate);
+      var sql = $@"
+          SELECT * from v_products_filter
+          WHERE categoryid IN ({inClause})
+          LIMIT 12
+        ";
+      var products = await _repo.getProductBySql(sql);
+      return products;
     }
   }
+
 }
