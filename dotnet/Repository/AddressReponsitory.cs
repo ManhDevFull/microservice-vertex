@@ -1,7 +1,7 @@
 using be_dotnet_ecommerce1.Data;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
-
+using Microsoft.EntityFrameworkCore;
 namespace dotnet.Repository
 {
   public class AddressReponsitory : IAddressReponsitory
@@ -18,15 +18,15 @@ namespace dotnet.Repository
 
     public async Task<IEnumerable<Address>> GetAddressesByUserIdAsync(int userId)
     {
-      return await _context.address
+      return await _connect.address
           .Where(a => a.accountid == userId)
-          .OrderByDescending(a => a.createdate) // Địa chỉ mới nhất lên đầu
+          .OrderByDescending(a => a.createdate)
           .ToListAsync();
     }
 
     public async Task<Address?> GetAddressByIdAsync(int id)
     {
-      return await _context.address.FirstOrDefaultAsync(a => a.id == id);
+      return await _connect.address.FirstOrDefaultAsync(a => a.id == id);
     }
 
     public async Task<Address> CreateAddressAsync(Address address)
@@ -35,8 +35,8 @@ namespace dotnet.Repository
       address.createdate = DateTime.UtcNow;
       address.updatedate = DateTime.UtcNow;
 
-      _context.address.Add(address);
-      await _context.SaveChangesAsync();
+      _connect.address.Add(address);
+      await _connect.SaveChangesAsync();
       return address;
     }
 
@@ -44,18 +44,18 @@ namespace dotnet.Repository
     {
       address.updatedate = DateTime.UtcNow;
 
-      _context.address.Update(address);
-      await _context.SaveChangesAsync();
+      _connect.address.Update(address);
+      await _connect.SaveChangesAsync();
       return address;
     }
 
     public async Task<bool> DeleteAddressAsync(int id)
     {
-      var address = await _context.address.FirstOrDefaultAsync(a => a.id == id);
+      var address = await _connect.address.FirstOrDefaultAsync(a => a.id == id);
       if (address == null) return false;
 
-      _context.address.Remove(address);
-      await _context.SaveChangesAsync();
+      _connect.address.Remove(address);
+      await _connect.SaveChangesAsync();
       return true;
     }
   }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using dotnet.Model;
-
+using dotnet.Dtos;
 namespace dotnet.Service.IService
 {
   public interface IAddressService

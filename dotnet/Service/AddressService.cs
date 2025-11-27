@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
 using dotnet.Service.IService;
-
+using dotnet.Dtos;
 namespace dotnet.Service
 {
   public class AddressService : IAddressService
@@ -19,11 +19,6 @@ namespace dotnet.Service
     {
       var list = _repo.getAddressByIdUser(id);
       return list;
-    }
-
-    public List<Address> getAddressByIdUser(int id)
-    {
-      return _repo.getAddressByIdUser(id);
     }
 
     // --- TRIỂN KHAI CÁC HÀM MỚI ---
