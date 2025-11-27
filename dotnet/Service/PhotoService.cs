@@ -47,5 +47,39 @@ namespace be_dotnet_ecommerce1.Service
             var deleteParams = new DeletionParams(publicId);
             return await _cloudinary.DestroyAsync(deleteParams);
         }
+             public async Task<DeletionResult> DeletePhotoByUrlAsync(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl))
+            {
+                return new DeletionResult { Result = "Url rỗng hoặc null" };
+            }
+
+            string publicId;
+            try
+            {
+                // 1. Phân tích chuỗi URL
+                var uri = new Uri(imageUrl);
+
+                // 2. Lấy tên tệp tin từ đường dẫn (ví dụ: "abc123xyz.jpg")
+                var fileName = Path.GetFileName(uri.AbsolutePath); 
+
+                // 3. Lấy tên tệp tin không bao gồm phần mở rộng (ví dụ: "abc123xyz")
+                // Đây chính là PublicId mà Cloudinary đã tạo ngẫu nhiên
+                publicId = Path.GetFileNameWithoutExtension(fileName); 
+            }
+            catch (Exception ex)
+            {
+                // Lỗi nếu URL không hợp lệ
+                return new DeletionResult { Result = $"Lỗi phân tích URL: {ex.Message}" };
+            }
+
+            if (string.IsNullOrEmpty(publicId))
+            {
+                return new DeletionResult { Result = "Không thể trích xuất PublicId từ URL" };
+            }
+
+            // 4. Gọi hàm xóa bằng PublicId đã trích xuất
+            return await DeletePhotoAsync(publicId);
+        }
     }
 }

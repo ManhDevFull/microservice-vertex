@@ -6,6 +6,7 @@ using be_dotnet_ecommerce1.Dtos;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using be.Service.IService;
+
 namespace dotnet.Controllers
 {
     [ApiController]
@@ -36,20 +37,22 @@ namespace dotnet.Controllers
                     return Unauthorized("Không xác định được người dùng.");
                 }
 
-                var orderDetail = await _context.OrderDetails
-                    .Include(od => od.Order)
-                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
+                var orderDetail = await _context.orderdetails
+                    .Include(od => od.order)
+                    .FirstOrDefaultAsync(od => od.id == request.OrderDetailId);
 
                 if (orderDetail == null)
                 {
                     return NotFound("Không tìm thấy sản phẩm này trong đơn hàng.");
                 }
 
-                if (orderDetail.Order.AccountId != userId) 
+                if (orderDetail.order.accountid != userId) 
                 {
                     return Forbid("Bạn không có quyền đánh giá đơn hàng của người khác.");
                 }
-                var existingReview = await _context.Reviews
+
+                // SỬA: _context.reviews (chữ thường) thay vì Reviews
+                var existingReview = await _context.reviews
                     .FirstOrDefaultAsync(r => r.orderdetail_id == request.OrderDetailId);
                 
                 if (existingReview != null)
@@ -81,7 +84,8 @@ namespace dotnet.Controllers
                     isupdated = false
                 };
 
-                _context.Reviews.Add(newReview);
+                // SỬA: _context.reviews (chữ thường)
+                _context.reviews.Add(newReview);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Đánh giá thành công!", reviewId = newReview.id });
