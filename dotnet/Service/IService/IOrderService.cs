@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
@@ -23,5 +24,9 @@ namespace dotnet.Service.IService
     Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId);
     Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus);
     Task<OrderAdminSummaryDTO> GetSummaryAsync();
+    Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
+      int accountId,
+      CreateOrderRequestDto request,
+      CancellationToken cancellationToken = default);
   }
 }

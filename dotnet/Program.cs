@@ -20,6 +20,8 @@ using dotnet.Repository.IRepository;
 using dotnet.Service;
 using dotnet.Service.IService;
 using Chat.Grpc;
+using Payment.Grpc;
+using Shipping.Grpc;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
 using be.Service.IService;
 
@@ -57,6 +59,8 @@ builder.Services.AddScoped<IVariantService, VariantService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 // Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
@@ -140,6 +144,46 @@ builder.Services.AddGrpc(options =>
 builder.Services.AddGrpcClient<ChatGrpc.ChatGrpcClient>(o =>
 {
     o.Address = new Uri(chatGrpcAddress);
+}).ConfigureChannel(options =>
+{
+    options.Credentials = ChannelCredentials.Insecure;
+});
+
+var shippingGrpcAddress = builder.Configuration["Grpc:ShippingUrl"];
+if (string.IsNullOrWhiteSpace(shippingGrpcAddress))
+    throw new Exception("Grpc:ShippingUrl is missing. Please configure shipping service address.");
+
+builder.Services.AddGrpcClient<Shipping.Grpc.PaymentRpc.PaymentRpcClient>(o =>
+{
+    o.Address = new Uri(shippingGrpcAddress);
+}).ConfigureChannel(options =>
+{
+    options.Credentials = ChannelCredentials.Insecure;
+});
+
+builder.Services.AddGrpcClient<Shipping.Grpc.ShippingRpc.ShippingRpcClient>(o =>
+{
+    o.Address = new Uri(shippingGrpcAddress);
+}).ConfigureChannel(options =>
+{
+    options.Credentials = ChannelCredentials.Insecure;
+});
+
+builder.Services.AddGrpcClient<Shipping.Grpc.CheckoutRpc.CheckoutRpcClient>(o =>
+{
+    o.Address = new Uri(shippingGrpcAddress);
+}).ConfigureChannel(options =>
+{
+    options.Credentials = ChannelCredentials.Insecure;
+});
+
+var paymentGrpcAddress = builder.Configuration["Grpc:PaymentUrl"];
+if (string.IsNullOrWhiteSpace(paymentGrpcAddress))
+    throw new Exception("Grpc:PaymentUrl is missing. Please configure payment service address.");
+
+builder.Services.AddGrpcClient<Payment.Grpc.PaymentRpc.PaymentRpcClient>("PaymentServiceClient", o =>
+{
+    o.Address = new Uri(paymentGrpcAddress);
 }).ConfigureChannel(options =>
 {
     options.Credentials = ChannelCredentials.Insecure;

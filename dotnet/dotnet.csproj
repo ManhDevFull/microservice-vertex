@@ -31,9 +31,19 @@
     <Folder Include="Dtos\" />
     <Folder Include="Middlewares\" />
   </ItemGroup>
-    <ItemGroup>
+  <ItemGroup>
+    <Compile Remove="ShippingService\**\*.cs" />
+    <Compile Remove="PaymentService\**\*.cs" />
+    <EmbeddedResource Remove="ShippingService\**\*" />
+    <EmbeddedResource Remove="PaymentService\**\*" />
+    <None Remove="ShippingService\**\*" />
+    <None Remove="PaymentService\**\*" />
+  </ItemGroup>
+  <ItemGroup>
     <Protobuf Include="Protos/auth.proto" GrpcServices="Server" />
     <Protobuf Include="..\Contracts\chat.proto" GrpcServices="Client" Link="Protos/chat.proto" />
+    <Protobuf Include="Protos/payment.proto" GrpcServices="Client" />
+    <Protobuf Include="Protos/shipping.proto" GrpcServices="Client" />
   </ItemGroup>
   <ItemGroup>
     <None Include="vertex.json">

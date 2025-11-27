@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
@@ -47,6 +48,14 @@ namespace dotnet.Service
     public Task<OrderAdminSummaryDTO> GetSummaryAsync()
     {
       return _repo.GetSummaryAsync();
+    }
+
+    public Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
+      int accountId,
+      CreateOrderRequestDto request,
+      CancellationToken cancellationToken = default)
+    {
+      return _repo.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
     }
   }
 }

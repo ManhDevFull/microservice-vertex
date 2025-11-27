@@ -1,0 +1,39 @@
+syntax = "proto3";
+option csharp_namespace = "Payment.Grpc";
+
+package payment;
+
+message CreatePaymentRequest {
+  string orderId = 1;
+  int32 accountId = 2;
+  int64 amount = 3;
+  string orderInfo = 4;
+  string returnUrl = 5;
+}
+
+message CreatePaymentResponse {
+  bool success = 1;
+  string paymentUrl = 2;
+  string qrCode = 3;
+  string requestId = 4;
+  string message = 5;
+}
+
+message GetPaymentStatusRequest {
+  string orderId = 1;
+}
+
+message PaymentStatusResponse {
+  string orderId = 1;
+  string status = 2;
+  string momoTransactionId = 3;
+  string responseCode = 4;
+  string message = 5;
+  int64 amount = 6;
+}
+
+service PaymentRpc {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (PaymentStatusResponse);
+}
+

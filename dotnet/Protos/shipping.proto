@@ -1,0 +1,65 @@
+syntax = "proto3";
+option csharp_namespace = "Shipping.Grpc";
+
+package shipping;
+
+message Empty {}
+
+message PaymentProviderDto {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string logoUrl = 5;
+}
+
+message ShippingCarrierDto {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string logoUrl = 4;
+}
+
+message ShippingOptionDto {
+  int32 id = 1;
+  int32 carrierId = 2;
+  string code = 3;
+  string name = 4;
+  int32 deliveryMinDays = 5;
+  int32 deliveryMaxDays = 6;
+  double shippingCost = 7;
+  bool insuranceAvailable = 8;
+  string notes = 9;
+}
+
+message PaymentProviderList { repeated PaymentProviderDto items = 1; }
+message ShippingCarrierList { repeated ShippingCarrierDto items = 1; }
+message ShippingOptionList { repeated ShippingOptionDto items = 1; }
+
+message GetOptionsRequest { string carrierCode = 1; }
+
+service PaymentRpc {
+  rpc GetProviders(Empty) returns (PaymentProviderList);
+}
+
+service ShippingRpc {
+  rpc GetCarriers(Empty) returns (ShippingCarrierList);
+  rpc GetOptions(GetOptionsRequest) returns (ShippingOptionList);
+}
+
+message CheckoutSelectionDto {
+  int32 id = 1;
+  int32 accountId = 2;
+  int32 paymentProviderId = 3;
+  int32 shippingOptionId = 4;
+  string addressSnapshot = 5;
+}
+
+message SaveSelectionResponse { int32 id = 1; }
+message GetSelectionRequest { int32 accountId = 1; }
+
+service CheckoutRpc {
+  rpc SaveSelection(CheckoutSelectionDto) returns (SaveSelectionResponse);
+  rpc GetSelection(GetSelectionRequest) returns (CheckoutSelectionDto);
+}
+
