@@ -47,5 +47,11 @@ namespace dotnet.Controllers
             };
             return Ok(result);
         }
+        [HttpGet("detail-product/{id}")]
+        public async Task<IActionResult> getDetail(int id)
+        {
+            var product = await _service.getProductById(id);
+            return Ok(product);
+        }
     }
 }

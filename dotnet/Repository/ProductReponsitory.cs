@@ -326,5 +326,31 @@ namespace dotnet.Repository
       return count;
     }
 
+    public async Task<ProductFilterDTO> getProductById(int id)
+    {
+      var data = await _connect.v_ProductFilters
+          .Where(v => v.id == id)
+          .FirstOrDefaultAsync();
+
+      if (data == null)
+        return null;
+
+      return new ProductFilterDTO
+      {
+        id = data.id,
+        name = data.name,
+        description = data.description,
+        brand = data.brand,
+        categoryId = data.categoryId,
+        categoryName = data.categoryName,
+        imgUrls = data.imgUrls,
+        rating = data.rating,
+        order = data.order,
+
+        variant = string.IsNullOrEmpty(data.variant)
+              ? null
+              : JsonSerializer.Deserialize<List<VariantDTO>>(data.variant)
+      };
+    }
   }
 }

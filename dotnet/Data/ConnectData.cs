@@ -321,6 +321,9 @@ namespace be_dotnet_ecommerce1.Data
             {
                 entity.HasNoKey();
                 entity.ToView("v_products_filter");
+                entity.Property(p=>p.categoryId).HasColumnName("categoryid");
+                entity.Property(p=>p.categoryName).HasColumnName("categoryname");
+                entity.Property(p=>p.imgUrls).HasColumnName("imgurls");
             });
             // view V_variant
             modelBuilder.Entity<V_variant>(entity =>
