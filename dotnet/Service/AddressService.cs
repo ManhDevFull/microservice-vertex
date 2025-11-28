@@ -57,7 +57,6 @@ namespace dotnet.Service
 
       var createdAddress = await _repo.CreateAddressAsync(address);
 
-      // Trả về DTO
       return new AddressDTO
       {
         Id = createdAddress.id,
