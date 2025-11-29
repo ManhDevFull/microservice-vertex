@@ -42,6 +42,8 @@ namespace dotnet.Repository
 
     public async Task<Address> UpdateAddressAsync(Address address)
     {
+      // Normalize timestamps to UTC to satisfy timestamptz
+      address.createdate = DateTime.SpecifyKind(address.createdate ?? DateTime.UtcNow, DateTimeKind.Utc);
       address.updatedate = DateTime.UtcNow;
 
       _connect.address.Update(address);
