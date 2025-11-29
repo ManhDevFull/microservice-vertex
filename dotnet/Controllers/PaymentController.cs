@@ -3,6 +3,7 @@ using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using dotnet.Dtos.Cart;
 
 namespace dotnet.Controllers;
 
@@ -130,13 +131,5 @@ public class PaymentController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
-}
-
-public class CreatePaymentRequestDto
-{
-    public string? OrderId { get; set; }
-    public long Amount { get; set; }
-    public string? OrderInfo { get; set; }
-    public string? ReturnUrl { get; set; }
 }
 

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using dotnet.Dtos.Cart;
 
 namespace dotnet.Controllers;
 
@@ -214,12 +215,5 @@ public class ShippingController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
-}
-
-public class SaveSelectionRequest
-{
-    public int PaymentProviderId { get; set; }
-    public int ShippingOptionId { get; set; }
-    public object AddressSnapshot { get; set; } = new();
 }
 
