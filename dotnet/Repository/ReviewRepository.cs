@@ -34,10 +34,10 @@ namespace dotnet.Repository
 
     var query = _connect.reviews
         .AsNoTracking()
-        .Include(r => r.orderdetail)
-            .ThenInclude(od => od.variant)
-                .ThenInclude(v => v.product)
-        .Include(r => r.orderdetail.order)
+        .Include(r => r.orderdetail!)
+            .ThenInclude(od => od.variant!)
+                .ThenInclude(v => v.product!)
+        .Include(r => r.orderdetail!.order!)
             .ThenInclude(o => o.account)
         .AsQueryable();
 
@@ -60,11 +60,22 @@ namespace dotnet.Repository
         var pattern = $"%{trimmed}%";
 
         query = query.Where(r =>
-            EF.Functions.ILike(r.content ?? "", pattern) ||
-            EF.Functions.ILike(r.orderdetail.order.account.firstname + " " + 
-                               r.orderdetail.order.account.lastname, pattern) ||
-            EF.Functions.ILike(r.orderdetail.order.account.email ?? "", pattern) ||
-            EF.Functions.ILike(r.orderdetail.variant.product.nameproduct ?? "", pattern)
+            EF.Functions.ILike(r.content ?? string.Empty, pattern) ||
+            EF.Functions.ILike(
+              ((r.orderdetail != null && r.orderdetail.order != null && r.orderdetail.order.account != null)
+                ? (r.orderdetail.order.account.firstname ?? string.Empty) + " " + (r.orderdetail.order.account.lastname ?? string.Empty)
+                : string.Empty).Trim(),
+              pattern) ||
+            EF.Functions.ILike(
+              r.orderdetail != null && r.orderdetail.order != null && r.orderdetail.order.account != null
+                ? (r.orderdetail.order.account.email ?? string.Empty)
+                : string.Empty,
+              pattern) ||
+            EF.Functions.ILike(
+              r.orderdetail != null && r.orderdetail.variant != null && r.orderdetail.variant.product != null
+                ? (r.orderdetail.variant.product.nameproduct ?? string.Empty)
+                : string.Empty,
+              pattern)
         );
     }
 
@@ -93,10 +104,10 @@ namespace dotnet.Repository
 {
     var review = await _connect.reviews
         .AsNoTracking()
-        .Include(r => r.orderdetail)
-            .ThenInclude(od => od.variant)
-                .ThenInclude(v => v.product)
-        .Include(r => r.orderdetail.order)
+        .Include(r => r.orderdetail!)
+            .ThenInclude(od => od.variant!)
+                .ThenInclude(v => v.product!)
+        .Include(r => r.orderdetail!.order!)
             .ThenInclude(o => o.account)
         .FirstOrDefaultAsync(r => r.id == reviewId);
 

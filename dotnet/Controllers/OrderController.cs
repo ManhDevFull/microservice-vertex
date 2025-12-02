@@ -123,7 +123,7 @@ namespace dotnet.Controllers
                 }
 
                 // 4. QUAN TRỌNG: Kiểm tra bảo mật (Chỉ xem đơn của chính mình)
-                if (orderDetail.AccountId != userId)
+                if (orderDetail.accountid != userId)
                 {
                     return NotFound(new { message = "Không tìm thấy đơn hàng." });
                 }

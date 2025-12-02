@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using dotnet.Dtos.admin;
+using dotnet.Model;
 using dotnet.Service.IService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,17 +36,18 @@ namespace dotnet.Controllers.admin
           query.ToDate);
 
       var summary = await _service.GetSummaryAsync();
+      var items = result.Items ?? Array.Empty<Order>();
 
       return Ok(new
       {
         status = 200,
         data = new
         {
-          items = result.Items,
+          items,
           total = result.Total,
           page = result.Page,
           size = result.Size,
-          summary
+          summary = summary ?? new OrderAdminSummaryDTO()
         },
         message = "Success"
       });

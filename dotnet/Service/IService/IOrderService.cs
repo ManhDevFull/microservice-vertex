@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Model;
 
 namespace dotnet.Service.IService
 {
@@ -11,7 +12,7 @@ namespace dotnet.Service.IService
   {
     Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId);
 
-    Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
+    Task<PagedResult<Order>> GetOrdersAsync(
       int page,
       int size,
       string? status,
@@ -21,7 +22,7 @@ namespace dotnet.Service.IService
       DateTime? fromDate,
       DateTime? toDate);
 
-    Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId);
+    Task<Order?> GetOrderDetailAsync(int orderId);
     Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus);
     Task<OrderAdminSummaryDTO> GetSummaryAsync();
     Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
