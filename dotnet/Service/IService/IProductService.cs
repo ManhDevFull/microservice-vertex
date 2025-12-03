@@ -10,6 +10,7 @@ namespace be.Service.IService
 
     public  Task<PagedResultDTO<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
     public Task<ICollection<ProductFilterDTO>> getProductsHaveDiscount();
+    public Task <ProductFilterDTO> getProductById(int id);
     public Task<PagedResult<ProductAdminDTO>> getProductAdmin(
     int page,
     int size,

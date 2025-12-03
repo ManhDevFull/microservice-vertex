@@ -198,6 +198,11 @@ namespace dotnet.Service
       var products = await _repo.getProductBySql(sql);
       return products;
     }
-  }
 
+    public async Task<ProductFilterDTO> getProductById(int id)
+    {
+      var rs = await _repo.getProductById(id);
+      return rs;
+    }
+  }
 }
