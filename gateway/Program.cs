@@ -7,6 +7,17 @@ builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.SetIsOriginAllowed(_ => true)
+          .AllowAnyHeader()
+          .AllowAnyMethod()
+          .AllowCredentials();
+    });
+});
+
 // Trust upstream headers (nginx, cloud load balancers, etc.)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -30,6 +41,8 @@ builder.WebHost.UseUrls(gatewayUrl);
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseRouting();
+app.UseCors("AllowFrontend");
 
 app.MapGet("/", () => Results.Ok(new
 {
@@ -38,7 +51,7 @@ app.MapGet("/", () => Results.Ok(new
     listeningOn = gatewayUrl
 }));
 
-app.MapHealthChecks("/health");
-app.MapReverseProxy();
+app.MapHealthChecks("/health").RequireCors("AllowFrontend");
+app.MapReverseProxy().RequireCors("AllowFrontend");
 
 app.Run();

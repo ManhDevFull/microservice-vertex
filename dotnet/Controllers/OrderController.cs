@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Threading;
+using dotnet.Dtos;
 using dotnet.Service.IService;
 
 namespace dotnet.Controllers
@@ -17,6 +20,64 @@ namespace dotnet.Controllers
         {
             _orderService = orderService;
             _logger = logger;
+        }
+
+        [HttpPost("create-from-payment")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CreateOrderFromPayment([FromBody] CreateOrderRequestDto request, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Received create-order-from-payment request: OrderId={OrderId}, AccountId={AccountId}", 
+                request?.OrderId, request?.AccountId);
+            
+            if (request == null)
+            {
+                _logger.LogWarning("Request body is null");
+                return BadRequest(new { error = "Request body is required." });
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            int accountId;
+
+            if (!string.IsNullOrEmpty(userIdStr) && int.TryParse(userIdStr, out var jwtAccountId))
+            {
+                accountId = jwtAccountId;
+                _logger.LogInformation("Using AccountId from JWT: {AccountId}", accountId);
+            }
+            else if (request.AccountId.HasValue)
+            {
+                accountId = request.AccountId.Value;
+                _logger.LogInformation("Using AccountId from request: {AccountId}", accountId);
+            }
+            else
+            {
+                _logger.LogWarning("AccountId is missing from both JWT and request body");
+                return Unauthorized(new { error = "AccountId is required." });
+            }
+
+            try
+            {
+                _logger.LogInformation("Creating order for account {AccountId} with OrderId {OrderId}", accountId, request.OrderId);
+                var result = await _orderService.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
+                _logger.LogInformation("Order created successfully: OrderId={OrderId}, Items={Items}, CartCleared={CartCleared}", 
+                    result.OrderId, result.Items, result.CartCleared);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Unable to create order for account {AccountId}: {Message}", accountId, ex.Message);
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Address validation failed for account {AccountId}: {Message}", accountId, ex.Message);
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating orders from payment for account {AccountId}: {Message}, StackTrace: {StackTrace}", 
+                    accountId, ex.Message, ex.StackTrace);
+                return StatusCode(500, new { error = "Internal server error." });
+            }
         }
 
         [HttpGet("my-orders")]
@@ -62,7 +123,7 @@ namespace dotnet.Controllers
                 }
 
                 // 4. QUAN TRỌNG: Kiểm tra bảo mật (Chỉ xem đơn của chính mình)
-                if (orderDetail.AccountId != userId)
+                if (orderDetail.accountid != userId)
                 {
                     return NotFound(new { message = "Không tìm thấy đơn hàng." });
                 }

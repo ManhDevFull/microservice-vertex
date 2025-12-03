@@ -9,5 +9,5 @@ public class Review
     public DateTime? createdate { get; set; }
     public DateTime? updatedate { get; set; }
     public bool isupdated { get; set; } = false;
-public OrderDetail orderdetail { get; set; }
+    public OrderDetail orderdetail { get; set; } = null!; // set by EF
 }
