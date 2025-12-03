@@ -43,9 +43,16 @@ namespace dotnet.Repository
 
             _logger.LogInformation("Creating order from cart for account {AccountId}, OrderId: {OrderId}", accountId, request.OrderId);
             
-            var cartItems = await _connect.shoppingCarts
-                .Where(sc => sc.accountid == accountId)
-                .ToListAsync(cancellationToken);
+            var cartQuery = _connect.shoppingCarts
+                .Where(sc => sc.accountid == accountId);
+
+            if (request.SelectedCartIds != null && request.SelectedCartIds.Count > 0)
+            {
+                var ids = request.SelectedCartIds.Distinct().ToList();
+                cartQuery = cartQuery.Where(sc => ids.Contains(sc.id));
+            }
+
+            var cartItems = await cartQuery.ToListAsync(cancellationToken);
 
             _logger.LogInformation("Found {Count} cart items for account {AccountId}", cartItems.Count, accountId);
 

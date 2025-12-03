@@ -36,10 +36,12 @@ namespace PaymentService.Services
             string orderId,
             long amount,
             string orderInfo,
-            string returnUrl)
+            string returnUrl,
+            string extraData = "")
         {
             try
             {
+                extraData ??= string.Empty;
                 if (string.IsNullOrEmpty(PartnerCode) || string.IsNullOrEmpty(AccessKey) || string.IsNullOrEmpty(SecretKey))
                 {
                     _logger.LogWarning("MoMo credentials not configured");
@@ -63,12 +65,12 @@ namespace PaymentService.Services
                     redirectUrl = returnUrl,
                     ipnUrl = NotifyUrl,
                     requestType = "captureWallet",
-                    extraData = "",
+                    extraData = extraData,
                     lang = "vi"
                 };
 
                 // Create signature
-                var rawHash = $"accessKey={AccessKey}&amount={amount}&extraData=&ipnUrl={NotifyUrl}&orderId={orderId}&orderInfo={orderInfo}&partnerCode={PartnerCode}&redirectUrl={returnUrl}&requestId={requestId}&requestType=captureWallet";
+                var rawHash = $"accessKey={AccessKey}&amount={amount}&extraData={extraData}&ipnUrl={NotifyUrl}&orderId={orderId}&orderInfo={orderInfo}&partnerCode={PartnerCode}&redirectUrl={returnUrl}&requestId={requestId}&requestType=captureWallet";
                 var signature = ComputeHmacSha256(rawHash, SecretKey);
 
                 // Add signature to request
@@ -84,7 +86,7 @@ namespace PaymentService.Services
                     redirectUrl = returnUrl,
                     ipnUrl = NotifyUrl,
                     requestType = "captureWallet",
-                    extraData = "",
+                    extraData = extraData,
                     lang = "vi",
                     signature = signature
                 };

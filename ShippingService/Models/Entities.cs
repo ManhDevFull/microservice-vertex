@@ -1,5 +1,7 @@
 namespace ShippingService.Models
 {
+    using System.Text.Json.Serialization;
+
     public class PaymentProvider
     {
         public int Id { get; set; }
@@ -40,6 +42,7 @@ namespace ShippingService.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        [JsonIgnore] // prevent cycles when serializing carrier -> options -> carrier
         public ShippingCarrier? Carrier { get; set; }
     }
 

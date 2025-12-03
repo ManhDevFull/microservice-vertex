@@ -34,10 +34,12 @@ namespace ShippingService.Data
             {
                 e.ToTable("shipping_option");
                 e.HasKey(x => x.Id);
+
                 e.HasOne(x => x.Carrier)
                     .WithMany(x => x.Options)
                     .HasForeignKey(x => x.CarrierId)
                     .OnDelete(DeleteBehavior.Cascade);
+
                 e.HasIndex(x => new { x.CarrierId, x.Code }).IsUnique();
             });
 
@@ -50,5 +52,3 @@ namespace ShippingService.Data
         }
     }
 }
-
-

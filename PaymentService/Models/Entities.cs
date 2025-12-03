@@ -19,6 +19,6 @@ namespace PaymentService.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PaidAt { get; set; } // When payment was completed
+        public string? SelectedCartIds { get; set; } // comma-separated cart ids selected at checkout
     }
 }
-

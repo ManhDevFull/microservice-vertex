@@ -29,11 +29,16 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseNpgsql(conn);
 });
-
-// CORS
-var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? new[] { "http://localhost:3000" };
-builder.Services.AddCors(o => o.AddPolicy("app", p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("app", policy =>
+    {
+        policy.SetIsOriginAllowed(_ => true)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 builder.Services.AddGrpc();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -114,9 +119,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseRouting();
 app.UseCors("app");
 app.UseHttpsRedirection();
 app.MapGrpcService<PaymentService.Grpc.PaymentRpcImpl>();
-app.MapControllers();
+app.MapControllers().RequireCors("app");
 app.Run();
 

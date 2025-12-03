@@ -33,6 +33,106 @@ namespace PaymentService.Controllers
             _config = config;
         }
 
+        // POST /payment/create - create MoMo payment
+        [HttpPost("create")]
+        public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentRequestDto request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { success = false, message = "Request body is required" });
+            }
+
+            if (request.Amount <= 0)
+            {
+                return BadRequest(new { success = false, message = "Amount must be greater than zero" });
+            }
+
+            var orderId = string.IsNullOrWhiteSpace(request.OrderId)
+                ? Guid.NewGuid().ToString("N")
+                : request.OrderId.Trim();
+
+            var accountId = request.AccountId ?? 0;
+            var orderInfo = string.IsNullOrWhiteSpace(request.OrderInfo)
+                ? $"Order {orderId}"
+                : request.OrderInfo.Trim();
+
+            var existing = await _db.PaymentTransactions
+                .FirstOrDefaultAsync(t => t.OrderId == orderId);
+
+            if (existing != null && existing.Status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "Order already paid",
+                    orderId = existing.OrderId,
+                    paymentUrl = existing.PaymentUrl,
+                    requestId = existing.RequestId
+                });
+            }
+
+            var requestId = Guid.NewGuid().ToString("N");
+            var extraData = request.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+                ? string.Join(",", request.SelectedCartIds.Distinct())
+                : string.Empty;
+
+            var momoResult = await _momoService.CreatePaymentAsync(
+                requestId: requestId,
+                orderId: orderId,
+                amount: request.Amount,
+                orderInfo: orderInfo,
+                returnUrl: request.ReturnUrl ?? string.Empty,
+                extraData: extraData
+            );
+
+            if (!momoResult.Success)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = momoResult.Message ?? "Failed to create payment"
+                });
+            }
+
+            var transaction = existing ?? new PaymentTransaction
+            {
+                CreatedAt = DateTime.UtcNow
+            };
+
+            transaction.OrderId = orderId;
+            transaction.AccountId = accountId;
+            transaction.PartnerCode = _momoService.PartnerCode;
+            transaction.RequestId = requestId;
+            transaction.Amount = request.Amount;
+            transaction.OrderInfo = orderInfo;
+            transaction.PaymentUrl = momoResult.PaymentUrl;
+            transaction.QrCode = momoResult.QrCode;
+            transaction.Status = "PENDING";
+            transaction.SelectedCartIds = string.IsNullOrWhiteSpace(extraData) ? null : extraData;
+            transaction.UpdatedAt = DateTime.UtcNow;
+
+            if (existing == null)
+            {
+                _db.PaymentTransactions.Add(transaction);
+            }
+            else
+            {
+                _db.PaymentTransactions.Update(transaction);
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                orderId,
+                paymentUrl = momoResult.PaymentUrl ?? string.Empty,
+                qrCode = momoResult.QrCode ?? string.Empty,
+                requestId,
+                message = momoResult.Message ?? "Payment created successfully"
+            });
+        }
+
         // GET /payment/test
         [HttpGet("test")]
         public IActionResult Test()
@@ -86,12 +186,26 @@ namespace PaymentService.Controllers
                         var httpClient = _httpClientFactory.CreateClient();
                         httpClient.Timeout = TimeSpan.FromSeconds(30);
                         
+                        var selectedIds = new List<int>();
+                        var rawIds = !string.IsNullOrWhiteSpace(transaction.SelectedCartIds)
+                            ? transaction.SelectedCartIds
+                            : request.extraData; // fallback if DB not populated
+                        if (!string.IsNullOrWhiteSpace(rawIds))
+                        {
+                            selectedIds = rawIds
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                .Select(idStr => int.TryParse(idStr, out var id) ? id : 0)
+                                .Where(id => id > 0)
+                                .ToList();
+                        }
+
                         var createOrderRequest = new
                         {
                             OrderId = request.orderId,
                             AccountId = transaction.AccountId, // Send accountId from transaction
                             PaymentMethod = "MoMo",
-                            ClearCart = true // Explicitly clear cart after order creation
+                            ClearCart = true, // Explicitly clear cart after order creation
+                            SelectedCartIds = selectedIds
                         };
                         
                         var json = JsonConvert.SerializeObject(createOrderRequest);

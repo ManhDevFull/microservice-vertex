@@ -14,6 +14,10 @@ public class CreateOrderRequestDto
     /// after the order is created. Defaults to true to preserve current behaviour.
     /// </summary>
     public bool? ClearCart { get; set; }
+    /// <summary>
+    /// Optional list of cart item IDs to include in the order. If null/empty, the entire cart is used.
+    /// </summary>
+    public List<int>? SelectedCartIds { get; set; }
 }
 
 public class CustomerInfoDto

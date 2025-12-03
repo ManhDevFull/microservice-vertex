@@ -30,8 +30,16 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 });
 
 // CORS
-var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? new[] { "http://localhost:3000" };
-builder.Services.AddCors(o => o.AddPolicy("app", p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("app", policy =>
+    {
+        policy.SetIsOriginAllowed(_ => true)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 builder.Services.AddGrpc();
 builder.Services.AddControllers();
@@ -40,11 +48,12 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Ensure DB
+// Ensure DB + seed initial data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    await db.Database.EnsureCreatedAsync();
+    await Seed.EnsureSeedAsync(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -53,12 +62,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseRouting();
 app.UseCors("app");
 app.UseHttpsRedirection();
 app.MapGrpcService<PaymentRpcImpl>();
 app.MapGrpcService<ShippingRpcImpl>();
 app.MapGrpcService<CheckoutRpcImpl>();
-app.MapControllers();
+app.MapControllers().RequireCors("app");
 app.Run();
 
 
