@@ -7,7 +7,7 @@ using dotnet.Service.IService;
 namespace dotnet.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] // API sẽ là: http://localhost:5200/Address
+    [Route("[controller]")] // API sẽ là: http://localhost:5200/Address
     [Authorize] // Yêu cầu đăng nhập
     public class AddressController : ControllerBase
     {
@@ -101,7 +101,7 @@ namespace dotnet.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi cập nhật địa chỉ ID {AddressId}", id);
-                return StatusCode(500, new { message = "Lỗi server khi cập nhật địa chỉ." });
+                return StatusCode(501, new { message = "Lỗi server khi cập nhật địa chỉ." });
             }
         }
 

@@ -1,0 +1,6 @@
+# Ignore build artifacts across services
+**/bin/
+**/obj/
+.env.runtime
+.vs/
+**/appsettings.json

@@ -16,5 +16,6 @@ namespace be_dotnet_ecommerce1.Repository.IReopsitory
         public Task<bool> DeleteCategoryAsync(int categoryId);
         public List<BrandOptionDTO> getBrandByCate(int? categoryId);
         public Task<List<V_CategoryDTO>> getAllCategory();
+        public Task<ICollection<CategoryDTO>> getCateById(int id);
     }
 }

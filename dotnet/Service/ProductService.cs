@@ -6,15 +6,18 @@ using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Service.IService;
 using be.Service.IService;
 using dotnet.Dtos.admin;
+using be_dotnet_ecommerce1.Repository.IReopsitory;
 
 namespace dotnet.Service
 {
   public class ProductService : IProductService
   {
     private readonly IProductReponsitory _repo;
-    public ProductService(IProductReponsitory repo)
+    private readonly ICategoryRepository _categoryRepository;
+    public ProductService(IProductReponsitory repo, ICategoryRepository categoryRepository)
     {
       _repo = repo;
+      _categoryRepository = categoryRepository;
     }
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
         int page,
@@ -148,6 +151,58 @@ namespace dotnet.Service
     public Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId)
     {
       return _repo.DeleteVariantAsync(productId, variantId);
+    }
+    // lấy ra 4 sản phẩm có giảm giá
+    public async Task<ICollection<ProductFilterDTO>> getProductsHaveDiscount()
+    {
+      var sql = @"SELECT *
+        FROM v_products_filter v
+        WHERE EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(v.variant) AS var(variant)
+            JOIN LATERAL jsonb_array_elements(var.variant->'discounts') AS d(discount) ON TRUE
+            -- WHERE (d.discount->>'endtime')::timestamp > NOW()
+        )
+        LIMIT 4;";
+      var rs = await _repo.getProductBySql(sql);
+      return rs;
+    }
+    // lấy ra sản phẩm có lượng mua nhiều nhất
+    public async Task<ProductFilterDTO> getTop1ProductByOrder()
+    {
+      var sql = @"
+              SELECT *
+              FROM v_products_filter
+              ORDER BY ""order"" DESC
+              LIMIT 1
+          ";
+      var rs = await _repo.getProductBySql(sql);
+      return rs.FirstOrDefault();
+    }
+    // lấy ra các sản phẩm liên quan với sản phẩm có lượng mua nhiều nhât
+    // lấy theo idparent của category
+    public async Task<ICollection<ProductFilterDTO>> getProductFrequently()
+    {
+      var topProductByOrder = await getTop1ProductByOrder(); // lấy sản phẩm có lượng mua nhiều nhất
+      // lấy ra các category con (category có idparent  = topProductByOrder.categoryId)
+      var categories = await _categoryRepository.getCateById(topProductByOrder.categoryId);
+      // lấy ra danh sách id category con 
+      var idcate = categories.Select(c => c._id).ToList();
+      // chuển thành chuỗi
+      var inClause = string.Join(",", idcate);
+      var sql = $@"
+          SELECT * from v_products_filter
+          WHERE categoryid IN ({inClause})
+          LIMIT 8
+        ";
+      var products = await _repo.getProductBySql(sql);
+      return products;
+    }
+
+    public async Task<ProductFilterDTO> getProductById(int id)
+    {
+      var rs = await _repo.getProductById(id);
+      return rs;
     }
   }
 }
