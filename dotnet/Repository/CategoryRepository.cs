@@ -264,5 +264,17 @@ namespace be_dotnet_ecommerce1.Repository
       }).ToListAsync();
       return rs;
     }
+  // lấy ra các category có idparent tương ứng
+    public async Task<ICollection<CategoryDTO>> getCateById(int id)
+    {
+      var cates = await _connect.categories.Where(c => c.idparent == id)
+      .Select(c => new CategoryDTO
+      {
+        _id = c.id,
+        name_category = c.namecategory
+      }).ToListAsync();
+      ;
+      return cates;
+    }
   }
 }

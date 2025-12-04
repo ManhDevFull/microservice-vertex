@@ -20,6 +20,7 @@ namespace dotnet.Repository.IRepository
         bool? stock,
         string sort = "newest");
     public Task<int> countProductBySql(string sql);
+    public Task<ProductFilterDTO> getProductById(int id);
     public Task<List<ProductFilterDTO>> getProductBySql(string sql);
     public Task<ProductAdminDTO?> CreateProductAsync(ProductAdminCreateRequest request);
     public Task<ProductAdminDTO?> UpdateProductAsync(int productId, ProductAdminUpdateRequest request);

@@ -13,6 +13,7 @@ namespace be_dotnet_ecommerce1.Service.IService
     public Task<CategoryAdminDTO> CreateCategoryAsync(CategoryCreateRequest request);
     public Task<CategoryAdminDTO?> UpdateCategoryAsync(int categoryId, CategoryUpdateRequest request);
     public Task<bool> DeleteCategoryAsync(int categoryId);
-        public Task<List<V_CategoryDTO>> getAllCategory();
+    public Task<List<V_CategoryDTO>> getAllCategory();
+    public Task<ICollection<CategoryDTO>> getCategoriesParent();
   }
 }

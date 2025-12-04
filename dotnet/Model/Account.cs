@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace dotnet.Model;
 public class Account
 {
@@ -6,13 +8,16 @@ public class Account
     public string? lastname { get; set; }
     public string? firstname { get; set; }
     public DateTime? bod { get; set; }
+    [JsonIgnore]
     public string? password { get; set; }
     public int role { get; set; } = 3;
     public string? avatarimg { get; set; }
     public DateTime? createdate { get; set; }
     public DateTime? updatedate { get; set; }
     public bool isdeleted { get; set; } = false;
+    [JsonIgnore]
     public string? refreshtoken { get; set; }
+    [JsonIgnore]
     public DateTime? refreshtokenexpires { get; set; }
 
     public ICollection<Address> addresses { get; set; } = new List<Address>();

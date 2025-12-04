@@ -1,0 +1,39 @@
+syntax = "proto3";
+option csharp_namespace = "Payment.Grpc";
+
+package payment;
+
+message CreatePaymentRequest {
+  string orderId = 1;
+  int32 accountId = 2;
+  int64 amount = 3; // Amount in VND
+  string orderInfo = 4; // Order description
+  string returnUrl = 5; // Frontend callback URL
+}
+
+message CreatePaymentResponse {
+  bool success = 1;
+  string paymentUrl = 2; // URL to redirect user to MoMo payment page
+  string qrCode = 3; // QR code data (if available)
+  string requestId = 4; // MoMo request ID for tracking
+  string message = 5;
+}
+
+message GetPaymentStatusRequest {
+  string orderId = 1;
+}
+
+message PaymentStatusResponse {
+  string orderId = 1;
+  string status = 2; // PENDING, SUCCESS, FAILED, CANCELLED
+  string momoTransactionId = 3; // Empty if not available
+  string responseCode = 4; // Empty if not available
+  string message = 5; // Empty if not available
+  int64 amount = 6;
+}
+
+service PaymentRpc {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (PaymentStatusResponse);
+}
+

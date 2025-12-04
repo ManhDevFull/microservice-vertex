@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using be_dotnet_ecommerce1.Data;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Model;
 using dotnet.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace dotnet.Repository
@@ -15,9 +18,125 @@ namespace dotnet.Repository
     public class OrderRepository : IOrderRepository
     {
         private readonly ConnectData _connect;
-        public OrderRepository(ConnectData connect)
+        private readonly ILogger<OrderRepository> _logger;
+        
+        public OrderRepository(ConnectData connect, ILogger<OrderRepository> logger)
         {
             _connect = connect;
+            _logger = logger;
+        }
+
+        public async Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
+          int accountId,
+          CreateOrderRequestDto request,
+          CancellationToken cancellationToken = default)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            if (string.IsNullOrWhiteSpace(request.OrderId))
+            {
+                throw new InvalidOperationException("OrderId is required.");
+            }
+
+            _logger.LogInformation("Creating order from cart for account {AccountId}, OrderId: {OrderId}", accountId, request.OrderId);
+            
+            var cartQuery = _connect.shoppingCarts
+                .Where(sc => sc.accountid == accountId);
+
+            if (request.SelectedCartIds != null && request.SelectedCartIds.Count > 0)
+            {
+                var ids = request.SelectedCartIds.Distinct().ToList();
+                cartQuery = cartQuery.Where(sc => ids.Contains(sc.id));
+            }
+
+            var cartItems = await cartQuery.ToListAsync(cancellationToken);
+
+            _logger.LogInformation("Found {Count} cart items for account {AccountId}", cartItems.Count, accountId);
+
+            if (cartItems.Count == 0)
+            {
+                _logger.LogWarning("Cart is empty for account {AccountId}", accountId);
+                throw new InvalidOperationException($"Cart is empty for account {accountId}.");
+            }
+
+            await using var transaction = await _connect.Database.BeginTransactionAsync(cancellationToken);
+
+            int addressId;
+            Order order;
+            List<OrderDetail> orderDetails;
+            bool clearCart;
+
+            try
+            {
+                _logger.LogInformation("Resolving address for account {AccountId}", accountId);
+                addressId = await ResolveAddressAsync(accountId, request, cancellationToken);
+                _logger.LogInformation("Address resolved: {AddressId}", addressId);
+
+                order = new Order
+                {
+                    accountid = accountId,
+                    addressid = addressId,
+                    orderdate = DateTime.UtcNow,
+                    statusorder = "PENDING",
+                    typepay = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "MOMO" : request.PaymentMethod!.Trim(),
+                    statuspay = "PAID"
+                };
+
+                _connect.orders.Add(order);
+                await _connect.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Order created with ID: {OrderId}", order.id);
+
+                orderDetails = cartItems.Select(item => new OrderDetail
+                {
+                    order_id = order.id,
+                    variant_id = item.variantid,
+                    quantity = Math.Max(1, item.quantity)
+                }).ToList();
+
+                _connect.orderdetails.AddRange(orderDetails);
+                await _connect.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Created {Count} order details", orderDetails.Count);
+
+                clearCart = request.ClearCart ?? true;
+                if (clearCart)
+                {
+                    _logger.LogInformation("Clearing {Count} cart items for account {AccountId}", cartItems.Count, accountId);
+                    _connect.shoppingCarts.RemoveRange(cartItems);
+                    await _connect.SaveChangesAsync(cancellationToken);
+                    _logger.LogInformation("Cart cleared successfully");
+                }
+                else
+                {
+                    _logger.LogInformation("Cart clearing skipped (ClearCart=false)");
+                }
+
+                await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation("Transaction committed successfully for order {OrderId}", order.id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogWarning("Transaction rolled back due to error");
+                throw;
+            }
+
+            return new CreateOrderResponseDto
+            {
+                Success = true,
+                OrderToken = request.OrderId,
+                OrderId = order.id,
+                AddressId = addressId,
+                Items = orderDetails.Count,
+                PaymentMethod = order.typepay ?? string.Empty,
+                StatusOrder = order.statusorder ?? string.Empty,
+                StatusPay = order.statuspay ?? string.Empty,
+                CartCleared = clearCart,
+                OrderDetailIds = orderDetails.Select(od => od.id).ToList()
+            };
         }
 
         public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
@@ -59,15 +178,15 @@ namespace dotnet.Repository
         }
 
 
-    public async Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
-        int page,
-        int size,
-        string? status,
-        string? payment,
-        string? payType,
-        string? keyword,
-        DateTime? fromDate,
-        DateTime? toDate)
+    public async Task<PagedResult<Order>> GetOrdersAsync(
+      int page,
+      int size,
+      string? status,
+      string? payment,
+      string? payType,
+      string? keyword,
+      DateTime? fromDate,
+      DateTime? toDate)
     {
       page = Math.Max(1, page);
       size = Math.Clamp(size, 1, 100);
@@ -118,20 +237,30 @@ namespace dotnet.Repository
         {
           query = query.Where(o =>
               o.id == orderId ||
-              EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
-              EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
-              EF.Functions.ILike(o.statusorder ?? "", pattern) ||
-              EF.Functions.ILike(o.statuspay ?? "", pattern));
+              EF.Functions.ILike(
+                ((o.account != null ? (o.account.firstname ?? string.Empty) + " " + (o.account.lastname ?? string.Empty) : string.Empty)).Trim(),
+                pattern) ||
+              EF.Functions.ILike(o.account != null ? (o.account.email ?? string.Empty) : string.Empty, pattern) ||
+              (o.orderdetails != null && o.orderdetails.Any(od =>
+                od.variant != null &&
+                od.variant.product != null &&
+                EF.Functions.ILike(od.variant.product.nameproduct ?? string.Empty, pattern))) ||
+              EF.Functions.ILike(o.statusorder ?? string.Empty, pattern) ||
+              EF.Functions.ILike(o.statuspay ?? string.Empty, pattern));
         }
         else
         {
           query = query.Where(o =>
-              EF.Functions.ILike((o.account.firstname ?? "") + " " + (o.account.lastname ?? ""), pattern) ||
-              EF.Functions.ILike(o.account.email ?? "", pattern) ||
-              o.orderdetails!.Any(od => EF.Functions.ILike(od.variant!.product.nameproduct ?? "", pattern)) ||
-              EF.Functions.ILike(o.statusorder ?? "", pattern) ||
-              EF.Functions.ILike(o.statuspay ?? "", pattern));
+              EF.Functions.ILike(
+                ((o.account != null ? (o.account.firstname ?? string.Empty) + " " + (o.account.lastname ?? string.Empty) : string.Empty)).Trim(),
+                pattern) ||
+              EF.Functions.ILike(o.account != null ? (o.account.email ?? string.Empty) : string.Empty, pattern) ||
+              (o.orderdetails != null && o.orderdetails.Any(od =>
+                od.variant != null &&
+                od.variant.product != null &&
+                EF.Functions.ILike(od.variant.product.nameproduct ?? string.Empty, pattern))) ||
+              EF.Functions.ILike(o.statusorder ?? string.Empty, pattern) ||
+              EF.Functions.ILike(o.statuspay ?? string.Empty, pattern));
         }
       }
 
@@ -150,15 +279,15 @@ namespace dotnet.Repository
         .Select(order =>
         {
           detailLookup.TryGetValue(order.id, out var details);
-          IReadOnlyList<dotnet.Model.OrderDetail> normalizedDetails =
+          IReadOnlyList<OrderDetail> normalizedDetails =
             details != null
-              ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
-              : Array.Empty<dotnet.Model.OrderDetail>();
-          return MapToDto(order, normalizedDetails);
+              ? (IReadOnlyList<OrderDetail>)details
+              : Array.Empty<OrderDetail>();
+          return SanitizeOrder(order, normalizedDetails);
         })
         .ToList();
 
-      return new PagedResult<OrderAdminDTO>
+      return new PagedResult<Order>
       {
         Items = items,
         Total = total,
@@ -167,7 +296,7 @@ namespace dotnet.Repository
       };
     }
 
-    public async Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId)
+    public async Task<Order?> GetOrderDetailAsync(int orderId)
     {
       var order = await _connect.orders
           .AsNoTracking()
@@ -184,7 +313,7 @@ namespace dotnet.Repository
           ? (IReadOnlyList<dotnet.Model.OrderDetail>)details
           : Array.Empty<dotnet.Model.OrderDetail>();
 
-      return MapToDto(order, normalizedDetails);
+      return SanitizeOrder(order, normalizedDetails);
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status, string? paymentStatus)
@@ -273,6 +402,162 @@ namespace dotnet.Repository
                                .SumAsync();
 
       return summary;
+    }
+
+    private static Order SanitizeOrder(Order order, IReadOnlyList<OrderDetail> details)
+    {
+      var safeDetails = details?
+        .Where(d => d != null)
+        .Select(SanitizeOrderDetail)
+        .ToList() ?? new List<OrderDetail>();
+
+      return new Order
+      {
+        id = order.id,
+        accountid = order.accountid,
+        addressid = order.addressid,
+        orderdate = order.orderdate,
+        statusorder = order.statusorder ?? string.Empty,
+        receivedate = order.receivedate,
+        typepay = order.typepay ?? string.Empty,
+        statuspay = order.statuspay ?? string.Empty,
+        account = SanitizeAccount(order.account),
+        address = SanitizeAddress(order.address),
+        orderdetails = safeDetails
+      };
+    }
+
+    private static OrderDetail SanitizeOrderDetail(OrderDetail detail)
+    {
+      if (detail == null)
+      {
+        return new OrderDetail
+        {
+          quantity = 0
+        };
+      }
+
+      var quantity = detail.quantity == 0 ? 1 : detail.quantity;
+
+      return new OrderDetail
+      {
+        id = detail.id,
+        order_id = detail.order_id,
+        variant_id = detail.variant_id,
+        quantity = quantity,
+        variant = SanitizeVariant(detail.variant)
+      };
+    }
+
+    private static Variant? SanitizeVariant(Variant? variant)
+    {
+      if (variant == null)
+      {
+        return null;
+      }
+
+      return new Variant
+      {
+        id = variant.id,
+        product_id = variant.product_id,
+        valuevariant = variant.valuevariant,
+        stock = variant.stock,
+        inputprice = variant.inputprice,
+        price = variant.price,
+        createdate = variant.createdate,
+        updatedate = variant.updatedate,
+        isdeleted = variant.isdeleted,
+        product = SanitizeProduct(variant.product)
+      };
+    }
+
+    private static Product? SanitizeProduct(Product? product)
+    {
+      if (product == null)
+      {
+        return null;
+      }
+
+      return new Product
+      {
+        id = product.id,
+        nameproduct = product.nameproduct ?? string.Empty,
+        brand_id = product.brand_id,
+        description = product.description ?? string.Empty,
+        categoryId = product.categoryId,
+        imageurls = product.imageurls ?? Array.Empty<string>(),
+        createdate = product.createdate,
+        updatedate = product.updatedate,
+        isdeleted = product.isdeleted
+      };
+    }
+
+    private static Address SanitizeAddress(Address? address)
+    {
+      if (address == null)
+      {
+        return new Address
+        {
+          id = 0,
+          accountid = 0,
+          title = string.Empty,
+          namerecipient = string.Empty,
+          tel = string.Empty,
+          codeward = 0,
+          description = string.Empty,
+          detail = string.Empty,
+          createdate = null,
+          updatedate = null
+        };
+      }
+
+      return new Address
+      {
+        id = address.id,
+        accountid = address.accountid,
+        title = address.title ?? string.Empty,
+        namerecipient = address.namerecipient ?? string.Empty,
+        tel = address.tel ?? string.Empty,
+        codeward = address.codeward,
+        description = address.description ?? string.Empty,
+        detail = address.detail ?? string.Empty,
+        createdate = address.createdate,
+        updatedate = address.updatedate
+      };
+    }
+
+    private static Account SanitizeAccount(Account? account)
+    {
+      if (account == null)
+      {
+        return new Account
+        {
+          id = 0,
+          email = string.Empty,
+          lastname = string.Empty,
+          firstname = string.Empty,
+          bod = null,
+          role = 0,
+          avatarimg = string.Empty,
+          createdate = null,
+          updatedate = null,
+          isdeleted = false
+        };
+      }
+
+      return new Account
+      {
+        id = account.id,
+        email = account.email ?? string.Empty,
+        lastname = account.lastname ?? string.Empty,
+        firstname = account.firstname ?? string.Empty,
+        bod = account.bod,
+        role = account.role,
+        avatarimg = account.avatarimg ?? string.Empty,
+        createdate = account.createdate,
+        updatedate = account.updatedate,
+        isdeleted = account.isdeleted
+      };
     }
 
     private static OrderAdminDTO MapToDto(dotnet.Model.Order order, IReadOnlyList<dotnet.Model.OrderDetail> details)
@@ -527,6 +812,86 @@ namespace dotnet.Repository
       }
 
       return result;
+    }
+
+    private async Task<int> ResolveAddressAsync(int accountId, CreateOrderRequestDto request, CancellationToken cancellationToken)
+    {
+      if (request.AddressId.HasValue)
+      {
+        var existingAddress = await _connect.address
+          .FirstOrDefaultAsync(a => a.id == request.AddressId.Value && a.accountid == accountId, cancellationToken);
+
+        if (existingAddress == null)
+        {
+          throw new KeyNotFoundException("Address not found for this account.");
+        }
+
+        return existingAddress.id;
+      }
+
+      var info = NormalizeCustomerInfo(request.CustomerInfo);
+      var recipientName = $"{info.FirstName} {info.LastName}".Trim();
+      if (string.IsNullOrWhiteSpace(recipientName))
+      {
+        recipientName = "Customer";
+      }
+
+      var address = new Address
+      {
+        accountid = accountId,
+        title = string.IsNullOrWhiteSpace(info.Address) ? "Default" : "Checkout",
+        namerecipient = recipientName,
+        tel = info.Phone ?? string.Empty,
+        codeward = 0,
+        description = BuildAddressDescription(info),
+        detail = info.Address,
+        createdate = DateTime.UtcNow,
+        updatedate = DateTime.UtcNow
+      };
+
+      _connect.address.Add(address);
+      await _connect.SaveChangesAsync(cancellationToken);
+      return address.id;
+    }
+
+    private static CustomerInfoDto NormalizeCustomerInfo(CustomerInfoDto? info)
+    {
+      if (info != null)
+      {
+        return info;
+      }
+
+      return new CustomerInfoDto
+      {
+        FirstName = "Customer",
+        LastName = string.Empty,
+        Phone = string.Empty,
+        Country = "Vietnam",
+        State = string.Empty,
+        Address = string.Empty
+      };
+    }
+
+    private static string BuildAddressDescription(CustomerInfoDto info)
+    {
+      var parts = new List<string>();
+
+      if (!string.IsNullOrWhiteSpace(info.Address))
+      {
+        parts.Add(info.Address.Trim());
+      }
+
+      if (!string.IsNullOrWhiteSpace(info.State))
+      {
+        parts.Add(info.State.Trim());
+      }
+
+      if (!string.IsNullOrWhiteSpace(info.Country))
+      {
+        parts.Add(info.Country.Trim());
+      }
+
+      return string.Join(", ", parts);
     }
   }
 }
