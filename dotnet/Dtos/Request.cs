@@ -13,7 +13,11 @@ namespace dotnet.Dtos
 
   public class RefreshTokenRequest
   {
+<<<<<<< HEAD
     public string? RefreshToken { get; set; }
+=======
+    public string RefreshToken { get; set; } = "";
+>>>>>>> user
   }
 
   public class RegisterRequest

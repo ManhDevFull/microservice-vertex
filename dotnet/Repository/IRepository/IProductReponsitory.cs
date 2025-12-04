@@ -19,9 +19,15 @@ namespace dotnet.Repository.IRepository
         string? brand,
         bool? stock,
         string sort = "newest");
+<<<<<<< HEAD
     public Task<int> countProductBySql(string sql);
     public Task<ProductFilterDTO> getProductById(int id);
     public Task<List<ProductFilterDTO>> getProductBySql(string sql);
+=======
+    public int getQuantityByIdCategory(int id);
+    // public Task<List<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
+    public Task<List<ProductFilterDTO>> GetProductByFilter(FilterDTO dTO);
+>>>>>>> user
     public Task<ProductAdminDTO?> CreateProductAsync(ProductAdminCreateRequest request);
     public Task<ProductAdminDTO?> UpdateProductAsync(int productId, ProductAdminUpdateRequest request);
     public Task<bool> DeleteProductAsync(int productId);

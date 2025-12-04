@@ -1,9 +1,15 @@
 using be_dotnet_ecommerce1.Model;
+<<<<<<< HEAD
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+=======
+using dotnet.Dtos.admin;
+using dotnet.Model;
+using Microsoft.EntityFrameworkCore;
+>>>>>>> user
 using System.Text.Json;
 
 namespace be_dotnet_ecommerce1.Data
@@ -33,11 +39,14 @@ namespace be_dotnet_ecommerce1.Data
         public DbSet<CategoryAdminDTO> categoryAdmins { get; set; } = null!;
         public DbSet<UserAdminDTO> userAdmins { get; set; } = null!;
         public DbSet<ProductAdminDTO> productAdmins { get; set; } = null!;
+<<<<<<< HEAD
         /// view
         public DbSet<V_ProductFilter> v_ProductFilters { get; set; }
         public DbSet<V_variant> v_Variants { get; set; }
         // v_category
         public DbSet<V_Category> v_Categories { get; set; }
+=======
+>>>>>>> user
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -59,7 +68,11 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.refreshtoken).HasColumnName("refreshtoken");
                 e.Property(x => x.refreshtokenexpires).HasColumnName("refreshtokenexpires");
             });
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> user
             // -------- address --------
             modelBuilder.Entity<Address>(e =>
             {
@@ -222,7 +235,11 @@ namespace be_dotnet_ecommerce1.Data
             {
                 e.ToTable("review");
                 e.HasKey(x => x.id);
+<<<<<<< HEAD
                 e.Property(x => x.orderdetail_id).HasColumnName("order_id");
+=======
+                e.Property(x => x.orderid).HasColumnName("order_id");
+>>>>>>> user
                 e.Property(x => x.content).HasColumnName("content");
                 e.Property(x => x.rating).HasColumnName("rating");
                 e.Property(x => x.imageurls).HasColumnName("imageurls").HasColumnType("text[]");
@@ -230,9 +247,15 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.updatedate).HasColumnName("updatedate");
                 e.Property(x => x.isupdated).HasColumnName("isupdated");
 
+<<<<<<< HEAD
                 e.HasOne(x => x.orderdetail)
                     .WithMany(o => o.reviews)
                     .HasForeignKey(x => x.orderdetail_id)
+=======
+                e.HasOne(x => x.order)
+                    .WithOne(o => o.review)
+                    .HasForeignKey<Review>(x => x.orderid)
+>>>>>>> user
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -316,6 +339,7 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.min_price).HasColumnName("min_price");
                 e.Property(x => x.max_price).HasColumnName("max_price");
             });
+<<<<<<< HEAD
             // view v_product_filter
             modelBuilder.Entity<V_ProductFilter>(entity =>
             {
@@ -337,6 +361,9 @@ namespace be_dotnet_ecommerce1.Data
                 entity.HasNoKey();
                 entity.ToView("v_variant_filters");
             });
+=======
+
+>>>>>>> user
             base.OnModelCreating(modelBuilder);
         }
     }

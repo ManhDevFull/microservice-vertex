@@ -1,18 +1,25 @@
 using System.Linq;
 using System.Threading.Tasks;
+<<<<<<< HEAD
 using be.Service.IService;
+=======
+>>>>>>> user
 using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+<<<<<<< HEAD
 using dotnet.Service;
+=======
+>>>>>>> user
 
 namespace be_dotnet_ecommerce1.Service.IService
 {
   public class CategoryService : ICategoryService
   {
     private readonly ICategoryRepository _repo;
+<<<<<<< HEAD
     private readonly IProductService _productservice;
     public CategoryService(ICategoryRepository repo, IProductService productService)
     {
@@ -20,6 +27,21 @@ namespace be_dotnet_ecommerce1.Service.IService
       _productservice = productService;
     }
 
+=======
+    public CategoryService(ICategoryRepository repo)
+    {
+      _repo = repo;
+    }
+    public List<CategoryDTO> getCategoryParentById(int? id)
+    {
+      var list = _repo.getParentById(id).Select(c => new CategoryDTO
+      {
+        _id = c.id,
+        name_category = c.namecategory
+      }).ToList();
+      return list;
+    }
+>>>>>>> user
     public List<CategoryAdminDTO> getCategoryAdmin()
     {
       var list = _repo.getCategoryAdmin();
@@ -42,6 +64,7 @@ namespace be_dotnet_ecommerce1.Service.IService
     {
       return _repo.DeleteCategoryAsync(categoryId);
     }
+<<<<<<< HEAD
 
     public async Task<List<V_CategoryDTO>> getAllCategory()
     {
@@ -57,5 +80,7 @@ namespace be_dotnet_ecommerce1.Service.IService
       return rs;
     }
 
+=======
+>>>>>>> user
   }
 }

@@ -43,6 +43,10 @@ namespace dotnet.Repository
 
     public async Task<Account?> GetAccountByEmail(string email)
     {
+<<<<<<< HEAD
+=======
+
+>>>>>>> user
       return await _connect.accounts.FirstOrDefaultAsync(u => u.email == email);
     }
 
@@ -54,6 +58,10 @@ namespace dotnet.Repository
 
     public async Task<bool> AddAccount(Account account)
     {
+<<<<<<< HEAD
+=======
+
+>>>>>>> user
       _connect.accounts.Add(account);
       return await _connect.SaveChangesAsync() > 0;
     }

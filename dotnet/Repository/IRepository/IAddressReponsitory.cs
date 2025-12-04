@@ -9,6 +9,7 @@ namespace dotnet.Repository.IRepository
   public interface IAddressReponsitory
   {
     public List<Address> getAddressByIdUser(int id);
+<<<<<<< HEAD
 
     Task<IEnumerable<Address>> GetAddressesByUserIdAsync(int userId);
 
@@ -18,5 +19,7 @@ namespace dotnet.Repository.IRepository
 
     Task<Address> UpdateAddressAsync(Address address);
     Task<bool> DeleteAddressAsync(int id);
+=======
+>>>>>>> user
   }
 }

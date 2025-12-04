@@ -15,7 +15,10 @@ namespace dotnet.Dtos.admin
     public string ProductName { get; set; } = string.Empty;
     public string ProductImage { get; set; } = string.Empty;
     public Dictionary<string, string> VariantAttributes { get; set; } = new();
+<<<<<<< HEAD
     public List<OrderAdminItemDTO> Items { get; set; } = new();
+=======
+>>>>>>> user
     public int Quantity { get; set; }
     public int UnitPrice { get; set; }
     public int TotalPrice { get; set; }
@@ -24,6 +27,9 @@ namespace dotnet.Dtos.admin
     public string TypePay { get; set; } = string.Empty;
     public DateTime OrderDate { get; set; }
     public DateTime? ReceiveDate { get; set; }
+<<<<<<< HEAD
     public ProductSnapshotDTO? Product { get; set; }
+=======
+>>>>>>> user
   }
 }

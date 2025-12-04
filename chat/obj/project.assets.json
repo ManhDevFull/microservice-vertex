@@ -2649,11 +2649,16 @@
     ]
   },
   "packageFolders": {
+<<<<<<< HEAD
     "C:\\Users\\DELL\\.nuget\\packages\\": {}
+=======
+    "/home/manh/.nuget/packages/": {}
+>>>>>>> user
   },
   "project": {
     "version": "1.0.0",
     "restore": {
+<<<<<<< HEAD
       "projectUniqueName": "D:\\Ecommerce\\BackEnd\\chat\\chat.csproj",
       "projectName": "chat",
       "projectPath": "D:\\Ecommerce\\BackEnd\\chat\\chat.csproj",
@@ -2662,6 +2667,16 @@
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\DELL\\AppData\\Roaming\\NuGet\\NuGet.Config"
+=======
+      "projectUniqueName": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/chat/chat.csproj",
+      "projectName": "chat",
+      "projectPath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/chat/chat.csproj",
+      "packagesPath": "/home/manh/.nuget/packages/",
+      "outputPath": "/run/media/manh/01DB60055A8FAD30/Ecommerce/confictMicro/chat/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/home/manh/.nuget/NuGet/NuGet.Config"
+>>>>>>> user
       ],
       "originalTargetFrameworks": [
         "net9.0"
@@ -2685,7 +2700,11 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
+<<<<<<< HEAD
       "SdkAnalysisLevel": "9.0.300"
+=======
+      "SdkAnalysisLevel": "9.0.100"
+>>>>>>> user
     },
     "frameworks": {
       "net9.0": {
@@ -2757,7 +2776,11 @@
             "privateAssets": "all"
           }
         },
+<<<<<<< HEAD
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+=======
+        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.109/PortableRuntimeIdentifierGraph.json"
+>>>>>>> user
       }
     }
   }

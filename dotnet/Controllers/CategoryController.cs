@@ -14,11 +14,27 @@ namespace MyApp.Namespace
     {
       _service = service;
     }
+<<<<<<< HEAD
     [HttpGet]
     public async Task<IActionResult> getAllCategory()
     {
       var rs = await _service.getAllCategory();
       return Ok(rs);
     }
+=======
+    [HttpGet("parent/{id?}")]
+    public IActionResult CategoryParent(int? id)
+    {
+      var list = _service.getCategoryParentById(id);
+      return Ok(list);
+    }
+    // [HttpGet("/admin/category")]
+    // [Authorize(Roles = "0")]
+    // public IActionResult CategoryParentAdmin(int? id)
+    // {
+    //   var list = _service.getCategoryParentById(id);
+    //   return Ok(list);
+    // }
+>>>>>>> user
   }
 }
