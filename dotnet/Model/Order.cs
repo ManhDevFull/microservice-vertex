@@ -14,8 +14,4 @@ public class Order
   public Account? account { get; set; }
   public Address? address { get; set; }
   public ICollection<OrderDetail>? orderdetails { get; set; }
-<<<<<<< HEAD
-=======
-  public Review? review { get; set; }
->>>>>>> user
 }

@@ -8,9 +8,6 @@ namespace be.Service.IService
         Task<ImageUploadResult> AddPhotoAsync(IFormFile file);
 
         Task<DeletionResult> DeletePhotoAsync(string publicId);
-<<<<<<< HEAD
         Task<DeletionResult> DeletePhotoByUrlAsync(string oldAvatarUrl);
-=======
->>>>>>> user
     }
 }

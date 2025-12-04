@@ -22,96 +22,6 @@ namespace dotnet.Repository
       _connect = connect;
       variantRepository = new VariantRepository(_connect);
     }
-<<<<<<< HEAD
-=======
-
-   public async Task<List<ProductFilterDTO>> GetProductByFilter(FilterDTO dTO)
-{
-    try
-    {
-        // Lấy danh sách variant thỏa filter
-        var variants = await variantRepository.GetVariantByFilter(dTO) ?? new List<Variant>();
-        var productIds = variants.Select(v => v.product_id).Distinct().ToList();
-        if (productIds.Count == 0)
-        {
-            return new List<ProductFilterDTO>();
-        }
-
-        // Lấy danh sách sản phẩm có variant thuộc list
-        var products = await _connect.products
-            .Include(p => p.category)
-            .Include(p => p.brand) // thêm include brand
-            .Where(p => productIds.Contains(p.id))
-            .Select(p => new ProductFilterDTO
-            {
-                id = p.id,
-                name = p.nameproduct,
-                description = p.description,
-                // ✅ lấy tên brand
-                brand = p.brand != null ? p.brand.name : string.Empty,
-                categoryId = p.categoryId,
-                categoryName = p.category != null ? p.category.namecategory : null,
-                // ✅ đổi từ string[] sang List<string>
-                imgUrls = p.imageurls != null ? p.imageurls.ToList() : new List<string>(),
-
-                // ✅ map variant
-                variant = _connect.variants
-                    .Where(v => v.product_id == p.id && !v.isdeleted)
-                    .Select(v => new VariantDTO
-                    {
-                        id = v.id,
-                        // ✅ convert JSONB -> string
-                        valuevariant = v.valuevariant.RootElement.ToString(),
-                        stock = v.stock,
-                        inputprice = v.inputprice,
-                        price = v.price,
-                        createdate = v.createdate,
-                        updatedate = v.updatedate
-                    }).ToArray(),
-
-                // discount
-                discount = (from dp in _connect.discountProducts
-                            join d in _connect.discounts on dp.discountid equals d.id
-                            join v in _connect.variants on dp.variantid equals v.id
-                            where v.product_id == p.id && !v.isdeleted
-                            select d).ToArray(),
-
-                // rating
-                rating = (from r in _connect.reviews
-                          join od in _connect.orderdetails on r.orderid equals od.order_id
-                          join v in _connect.variants on od.variant_id equals v.id
-                          where v.product_id == p.id && !v.isdeleted
-                          group r by r.id into reviewGroup
-                          select (int?)reviewGroup.Max(x => x.rating)).Sum() ?? 0,
-
-                // order count
-                order = (from o in _connect.orders
-                         join od in _connect.orderdetails on o.id equals od.id
-                         join v in _connect.variants on od.variant_id equals v.id
-                         where v.product_id == p.id && !v.isdeleted
-                         select o.id).Distinct().Count()
-            })
-            .ToListAsync();
-
-        return products ?? new List<ProductFilterDTO>();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine(ex);
-        throw;
-    }
-}
-
-
-
-    public int getQuantityByIdCategory(int id)
-    {
-      var quantity = _connect.products.Count(p => p.categoryId == id);
-      return quantity;
-    }
-
-
->>>>>>> user
     public async Task<PagedResult<ProductAdminDTO>> getProductAdmin(
         int page,
         int size,
@@ -386,7 +296,6 @@ namespace dotnet.Repository
       return await GetProductAdminByIdAsync(productId);
     }
 
-<<<<<<< HEAD
     public async Task<List<ProductFilterDTO>> getProductBySql(string sql)
     {
       var rawData = await _connect.Set<V_ProductFilter>()
@@ -443,7 +352,5 @@ namespace dotnet.Repository
               : JsonSerializer.Deserialize<List<VariantDTO>>(data.variant)
       };
     }
-=======
->>>>>>> user
   }
 }

@@ -3,20 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using be.Service.IService;
-<<<<<<< HEAD
 using dotnet.Dtos;
-=======
->>>>>>> user
 using dotnet.Service.IService;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-<<<<<<< HEAD
 namespace dotnet.Controllers
-=======
-namespace be_dotnet_ecommerce1.Controllers
->>>>>>> user
 {
     [ApiController]
     [Route("[controller]")]
@@ -28,22 +21,12 @@ namespace be_dotnet_ecommerce1.Controllers
         {
             _service = service;
         }
-<<<<<<< HEAD
-=======
-        [HttpGet("{id}")]
-        public IActionResult getQuantityByIdCategory(int id)
-        {
-            var quantity = _service.getQuantityByIdCategory(id);
-            return Ok(quantity);
-        }
->>>>>>> user
         [HttpPost("filter")]
         public async Task<IActionResult> FilterProducts([FromBody] FilterDTO dTO)
         {
             var result = await _service.getProductByFilter(dTO);
             return Ok(result);
         }
-<<<<<<< HEAD
         [HttpGet("discount")]
         public async Task<IActionResult> getProductDiscount()
         {
@@ -72,9 +55,3 @@ namespace be_dotnet_ecommerce1.Controllers
         }
     }
 }
-=======
-
-       
-    }
-}
->>>>>>> user

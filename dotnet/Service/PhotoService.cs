@@ -47,7 +47,6 @@ namespace be_dotnet_ecommerce1.Service
             var deleteParams = new DeletionParams(publicId);
             return await _cloudinary.DestroyAsync(deleteParams);
         }
-<<<<<<< HEAD
              public async Task<DeletionResult> DeletePhotoByUrlAsync(string imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl))
@@ -82,7 +81,5 @@ namespace be_dotnet_ecommerce1.Service
             // 4. Gọi hàm xóa bằng PublicId đã trích xuất
             return await DeletePhotoAsync(publicId);
         }
-=======
->>>>>>> user
     }
 }

@@ -214,7 +214,6 @@ namespace dotnet.Controllers
         return StatusCode(500, new { message = "Lỗi server khi lưu ảnh." });
       }
     }
-<<<<<<< HEAD
 
         [HttpDelete("avatar")]
     [Authorize] // Yêu cầu đăng nhập
@@ -258,7 +257,5 @@ namespace dotnet.Controllers
         return StatusCode(500, new { message = "Lỗi server khi xóa ảnh cũ." });
       }
     }
-=======
->>>>>>> user
   }
 }

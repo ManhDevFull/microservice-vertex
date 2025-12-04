@@ -8,14 +8,9 @@ namespace be.Service.IService
   public interface IProductService
   {
 
-<<<<<<< HEAD
     public  Task<PagedResultDTO<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
     public Task<ICollection<ProductFilterDTO>> getProductsHaveDiscount();
     public Task <ProductFilterDTO> getProductById(int id);
-=======
-    public int getQuantityByIdCategory(int id);
-    public Task<List<ProductFilterDTO>> getProductByFilter(FilterDTO dTO);
->>>>>>> user
     public Task<PagedResult<ProductAdminDTO>> getProductAdmin(
     int page,
     int size,
@@ -31,11 +26,8 @@ namespace be.Service.IService
     public Task<ProductAdminDTO?> UpdateVariantAsync(int productId, int variantId, VariantAdminUpdateRequest request);
     public Task<ProductAdminDTO?> DeleteVariantAsync(int productId, int variantId);
     public Task<ProductAdminDTO?> GetProductAdminByIdAsync(int productId);
-<<<<<<< HEAD
     public Task<ProductFilterDTO> getTop1ProductByOrder();
     public Task<ICollection<ProductFilterDTO>> getProductFrequently();
-=======
->>>>>>> user
   }
 
 }

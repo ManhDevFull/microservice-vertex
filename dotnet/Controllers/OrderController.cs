@@ -1,13 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-<<<<<<< HEAD
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
 using dotnet.Dtos;
-=======
-using System.Security.Claims;
->>>>>>> user
 using dotnet.Service.IService;
 
 namespace dotnet.Controllers
@@ -26,7 +22,6 @@ namespace dotnet.Controllers
             _logger = logger;
         }
 
-<<<<<<< HEAD
         [HttpPost("create-from-payment")]
         [AllowAnonymous]
         public async Task<IActionResult> CreateOrderFromPayment([FromBody] CreateOrderRequestDto request, CancellationToken cancellationToken)
@@ -85,8 +80,6 @@ namespace dotnet.Controllers
             }
         }
 
-=======
->>>>>>> user
         [HttpGet("my-orders")]
         public async Task<IActionResult> GetMyOrderHistory()
         {
@@ -107,7 +100,6 @@ namespace dotnet.Controllers
                 return StatusCode(500, new { message = "Lỗi server khi lấy lịch sử đơn hàng." });
             }
         }
-<<<<<<< HEAD
 
         [HttpGet("my-orders/{orderId}")]
         public async Task<IActionResult> GetMyOrderDetail(int orderId)
@@ -148,7 +140,3 @@ namespace dotnet.Controllers
            
     }
 }
-=======
-    }
-}
->>>>>>> user

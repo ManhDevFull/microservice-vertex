@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
 using dotnet.Service.IService;
-<<<<<<< HEAD
 using dotnet.Dtos;
 namespace dotnet.Service
 {
@@ -87,6 +86,8 @@ namespace dotnet.Service
       existingAddress.detail = dto.Detail;
       existingAddress.description = dto.Description;
 
+      existingAddress.updatedate = DateTime.UtcNow;
+
       // 3. Lưu xuống DB
       var updatedAddress = await _repo.UpdateAddressAsync(existingAddress);
 
@@ -113,20 +114,5 @@ namespace dotnet.Service
       }
       return await _repo.DeleteAddressAsync(addressId);
     }
-=======
-
-namespace dotnet.Service
-{
-    public class AddressService : IAddressService
-    {
-    private readonly IAddressReponsitory _repo;
-    public AddressService(IAddressReponsitory repo){
-      _repo = repo;
-    }
-    public List<Address> getAddressByIdUser(int id){
-      var list = _repo.getAddressByIdUser(id);
-      return list;
-    }
->>>>>>> user
   }
 }

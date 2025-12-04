@@ -1,7 +1,6 @@
 using be_dotnet_ecommerce1.Data;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
-<<<<<<< HEAD
 using Microsoft.EntityFrameworkCore;
 namespace dotnet.Repository
 {
@@ -43,6 +42,8 @@ namespace dotnet.Repository
 
     public async Task<Address> UpdateAddressAsync(Address address)
     {
+      // Normalize timestamps to UTC to satisfy timestamptz
+      address.createdate = DateTime.SpecifyKind(address.createdate ?? DateTime.UtcNow, DateTimeKind.Utc);
       address.updatedate = DateTime.UtcNow;
 
       _connect.address.Update(address);
@@ -59,19 +60,5 @@ namespace dotnet.Repository
       await _connect.SaveChangesAsync();
       return true;
     }
-=======
-
-namespace dotnet.Repository
-{
-    public class AddressReponsitory : IAddressReponsitory
-    {
-    private readonly ConnectData _connect;
-    public AddressReponsitory(ConnectData connect){
-      _connect = connect;
-    }
-    public List<Address> getAddressByIdUser(int id){
-      return _connect.address.Where(c => c.accountid == id).ToList();
-    }
->>>>>>> user
   }
 }

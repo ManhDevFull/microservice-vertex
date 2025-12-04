@@ -20,22 +20,16 @@ using dotnet.Repository.IRepository;
 using dotnet.Service;
 using dotnet.Service.IService;
 using Chat.Grpc;
-<<<<<<< HEAD
 using Payment.Grpc;
 using Shipping.Grpc;
-=======
->>>>>>> user
 using be_dotnet_ecommerce1.Repository.IReopsitory;
 using be.Service.IService;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
-<<<<<<< HEAD
 builder.WebHost.UseUrls("http://localhost:5200");
 
-=======
->>>>>>> user
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -67,11 +61,8 @@ builder.Services.AddScoped<IVariantService, VariantService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
-<<<<<<< HEAD
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, CartService>();
-=======
->>>>>>> user
 
 // Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
@@ -160,7 +151,6 @@ builder.Services.AddGrpcClient<ChatGrpc.ChatGrpcClient>(o =>
     options.Credentials = ChannelCredentials.Insecure;
 });
 
-<<<<<<< HEAD
 var shippingGrpcAddress = builder.Configuration["Grpc:ShippingUrl"];
 if (string.IsNullOrWhiteSpace(shippingGrpcAddress))
     throw new Exception("Grpc:ShippingUrl is missing. Please configure shipping service address.");
@@ -201,8 +191,6 @@ builder.Services.AddGrpcClient<Payment.Grpc.PaymentRpc.PaymentRpcClient>("Paymen
     options.Credentials = ChannelCredentials.Insecure;
 });
 
-=======
->>>>>>> user
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNext", policy =>

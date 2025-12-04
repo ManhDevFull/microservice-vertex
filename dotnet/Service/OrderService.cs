@@ -1,16 +1,10 @@
 using System;
 using System.Collections.Generic;
-<<<<<<< HEAD
 using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Model;
-=======
-using System.Threading.Tasks;
-using dotnet.Dtos;
-using dotnet.Dtos.admin;
->>>>>>> user
 using dotnet.Repository.IRepository;
 using dotnet.Service.IService;
 
@@ -29,11 +23,7 @@ namespace dotnet.Service
             return await _repo.GetOrderHistoryAsync(accountId);
         }
 
-<<<<<<< HEAD
     public Task<PagedResult<Order>> GetOrdersAsync(
-=======
-    public Task<PagedResult<OrderAdminDTO>> GetOrdersAsync(
->>>>>>> user
         int page,
         int size,
         string? status,
@@ -46,11 +36,7 @@ namespace dotnet.Service
       return _repo.GetOrdersAsync(page, size, status, payment, payType, keyword, fromDate, toDate);
     }
 
-<<<<<<< HEAD
     public Task<Order?> GetOrderDetailAsync(int orderId)
-=======
-    public Task<OrderAdminDTO?> GetOrderDetailAsync(int orderId)
->>>>>>> user
     {
       return _repo.GetOrderDetailAsync(orderId);
     }
@@ -64,7 +50,6 @@ namespace dotnet.Service
     {
       return _repo.GetSummaryAsync();
     }
-<<<<<<< HEAD
 
     public Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
       int accountId,
@@ -73,7 +58,5 @@ namespace dotnet.Service
     {
       return _repo.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
     }
-=======
->>>>>>> user
   }
 }

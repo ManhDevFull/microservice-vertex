@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 namespace dotnet.Dtos
 {
     public class DiscountDTO
@@ -9,12 +8,5 @@ namespace dotnet.Dtos
         public DateTime starttime { get; set; }
         public DateTime endtime { get; set; }
         //public DateTime? createtime { get; set; }
-=======
-namespace be_dotnet_ecommerce1.Dtos
-{
-    public class DiscountDTO
-    {
-        
->>>>>>> user
     }
 }

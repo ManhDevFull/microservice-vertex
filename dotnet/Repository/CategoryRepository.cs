@@ -6,10 +6,7 @@ using be_dotnet_ecommerce1.Data;
 using be_dotnet_ecommerce1.Dtos;
 using be_dotnet_ecommerce1.Model;
 using be_dotnet_ecommerce1.Repository.IReopsitory;
-<<<<<<< HEAD
 using dotnet.Dtos;
-=======
->>>>>>> user
 using dotnet.Dtos.admin;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
@@ -139,13 +136,8 @@ namespace be_dotnet_ecommerce1.Repository
           if (conflict)
             throw new InvalidOperationException("Another category with the same name already exists under the selected parent.");
 
-<<<<<<< HEAD
           category.namecategory = trimmed;
           hasChanges = true;
-=======
-            category.namecategory = trimmed;
-            hasChanges = true;
->>>>>>> user
         }
       }
 
@@ -261,7 +253,6 @@ namespace be_dotnet_ecommerce1.Repository
 
       return false;
     }
-<<<<<<< HEAD
 
     public async Task<List<V_CategoryDTO>> getAllCategory()
     {
@@ -285,7 +276,5 @@ namespace be_dotnet_ecommerce1.Repository
       ;
       return cates;
     }
-=======
->>>>>>> user
   }
 }

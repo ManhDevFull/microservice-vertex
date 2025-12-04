@@ -101,10 +101,7 @@ namespace dotnet.Controllers
           data = new
           {
             accessToken,
-<<<<<<< HEAD
             refreshToken,
-=======
->>>>>>> user
             user = new { id = user.id, name = $"{user.firstname} {user.lastname}", email = dto.Email, avatarUrl = user.avatarimg, rule = user.role }
           }
         });
@@ -210,11 +207,7 @@ namespace dotnet.Controllers
         return Ok(new
         {
           status = 200,
-<<<<<<< HEAD
           data = new { accessToken, refreshToken, user = new { id = user.id, name = displayName, avatarUrl = displayAvatar, email, rule = user.role } }
-=======
-          data = new { accessToken, user = new { id = user.id, name = displayName, avatarUrl = displayAvatar, email, rule = user.role } }
->>>>>>> user
         });
       }
       catch (Exception ex)
@@ -243,11 +236,7 @@ namespace dotnet.Controllers
 
         // NEW: EF Core
         var user = await _db.accounts.FirstOrDefaultAsync(u => u.refreshtoken == refreshTokenToCheck);
-<<<<<<< HEAD
         if (user == null || !user.refreshtokenexpires.HasValue || user.refreshtokenexpires.Value < DateTime.UtcNow)
-=======
-        if (user == null || user.refreshtokenexpires < DateTime.UtcNow)
->>>>>>> user
           return Unauthorized(new { message = "Invalid or expired refresh token" });
 
         var newRefreshToken = GenerateRefreshToken();
@@ -267,11 +256,7 @@ namespace dotnet.Controllers
         };
         Response.Cookies.Append("refreshToken", newRefreshToken, cookieOptions);
 
-<<<<<<< HEAD
         return Ok(new { status = 200, data = new { accessToken = newAccessToken, refreshToken = newRefreshToken } });
-=======
-        return Ok(new { status = 200, data = new { accessToken = newAccessToken } });
->>>>>>> user
       }
       catch (Exception ex)
       {
@@ -308,11 +293,7 @@ namespace dotnet.Controllers
         _logger.LogError("Verify service base URL is not configured.");
         return StatusCode(500, new { message = "OTP service is not configured." });
       }
-<<<<<<< HEAD
       _logger.LogInformation("Verify baseUrl = `{BaseUrl}`", baseUrl);
-=======
-_logger.LogInformation("Verify baseUrl = `{BaseUrl}`", baseUrl);
->>>>>>> user
 
       try
       {
@@ -584,8 +565,4 @@ _logger.LogInformation("Verify baseUrl = `{BaseUrl}`", baseUrl);
 <p>Thanks,<br/>Vertex E-commerce Team</p>";
     }
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> user

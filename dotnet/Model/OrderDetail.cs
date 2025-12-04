@@ -9,10 +9,7 @@ namespace dotnet.Model
 
     public Order? order { get; set; }
     public Variant? variant { get; set; }
-<<<<<<< HEAD
     public ICollection<Review>? reviews { get; set; }
 
-=======
->>>>>>> user
   }
 }
