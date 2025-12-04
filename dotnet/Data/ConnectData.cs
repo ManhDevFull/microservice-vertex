@@ -59,7 +59,6 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.refreshtoken).HasColumnName("refreshtoken");
                 e.Property(x => x.refreshtokenexpires).HasColumnName("refreshtokenexpires");
             });
-
             // -------- address --------
             modelBuilder.Entity<Address>(e =>
             {

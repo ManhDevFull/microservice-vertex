@@ -679,16 +679,15 @@ namespace dotnet.Repository
 
         items.Add(new OrderAdminItemDTO
         {
+          Id = detail.id,
           Product = snapshot,
           Quantity = quantity,
           UnitPrice = price,
           TotalPrice = price * quantity
         });
       }
-
       return items;
     }
-
     private async Task<Dictionary<int, List<dotnet.Model.OrderDetail>>> LoadOrderLineLookupAsync(IEnumerable<int> orderIds)
     {
       var ids = orderIds.Distinct().ToList();

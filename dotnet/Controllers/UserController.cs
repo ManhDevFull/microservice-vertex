@@ -214,5 +214,48 @@ namespace dotnet.Controllers
         return StatusCode(500, new { message = "Lỗi server khi lưu ảnh." });
       }
     }
+
+        [HttpDelete("avatar")]
+    [Authorize] // Yêu cầu đăng nhập
+    public async Task<IActionResult> DeleteAvatar([FromQuery] string oldAvatarUrl)
+    {
+      // Client phải gửi URL ảnh cũ lên qua query string 
+      // ví dụ: .../User/avatar?oldAvatarUrl=http://res.cloudinary.com/..../abc.jpg
+      if (string.IsNullOrEmpty(oldAvatarUrl))
+      {
+        return BadRequest(new { message = "Bạn phải cung cấp oldAvatarUrl." });
+      }
+
+      // Xác thực người dùng (để đảm bảo có token hợp lệ)
+      var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+      if (string.IsNullOrEmpty(userIdString))
+      {
+        return Unauthorized("Không thể xác định người dùng.");
+      }
+
+      try
+      {
+        // 2. Gọi service để xóa ảnh bằng URL
+        var deleteResult = await _photoService.DeletePhotoByUrlAsync(oldAvatarUrl);
+
+        // 3. Kiểm tra kết quả trả về từ Cloudinary
+        if (deleteResult.Result.ToLower() == "ok")
+        {
+          _logger.LogInformation("User ID {UserId} đã xóa ảnh cũ thành công: {Url}", userIdString, oldAvatarUrl);
+          return Ok(new { message = "Xóa ảnh cũ thành công." });
+        }
+        else
+        {
+          // Ghi log nếu Cloudinary trả về lỗi (ví dụ: "not found")
+          _logger.LogWarning("User ID {UserId} xóa ảnh cũ thất bại: {Result} - Url: {Url}", userIdString, deleteResult.Result, oldAvatarUrl);
+          return BadRequest(new { message = $"Xóa ảnh cũ thất bại: {deleteResult.Result}" });
+        }
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Lỗi server khi xóa ảnh cũ: {Url}", oldAvatarUrl);
+        return StatusCode(500, new { message = "Lỗi server khi xóa ảnh cũ." });
+      }
+    }
   }
 }
