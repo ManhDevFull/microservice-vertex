@@ -9,6 +9,8 @@ message CreatePaymentRequest {
   int64 amount = 3;
   string orderInfo = 4;
   string returnUrl = 5;
+  repeated int32 selectedCartIds = 6;
+  int32 addressId = 7;
 }
 
 message CreatePaymentResponse {

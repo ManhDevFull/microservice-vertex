@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Ecommerce\\BackEnd\\ShippingService\\ShippingService.csproj": {}
+    "D:\\VS Code\\project\\microservice\\ShippingService\\ShippingService.csproj": {}
   },
   "projects": {
-    "D:\\Ecommerce\\BackEnd\\ShippingService\\ShippingService.csproj": {
+    "D:\\VS Code\\project\\microservice\\ShippingService\\ShippingService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Ecommerce\\BackEnd\\ShippingService\\ShippingService.csproj",
+        "projectUniqueName": "D:\\VS Code\\project\\microservice\\ShippingService\\ShippingService.csproj",
         "projectName": "ShippingService",
-        "projectPath": "D:\\Ecommerce\\BackEnd\\ShippingService\\ShippingService.csproj",
-        "packagesPath": "C:\\Users\\DELL\\.nuget\\packages\\",
-        "outputPath": "D:\\Ecommerce\\BackEnd\\ShippingService\\obj\\",
+        "projectPath": "D:\\VS Code\\project\\microservice\\ShippingService\\ShippingService.csproj",
+        "packagesPath": "C:\\Users\\LEGION\\.nuget\\packages\\",
+        "outputPath": "D:\\VS Code\\project\\microservice\\ShippingService\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\DELL\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\LEGION\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -99,7 +105,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

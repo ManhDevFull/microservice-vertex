@@ -9,6 +9,8 @@ message CreatePaymentRequest {
   int64 amount = 3; // Amount in VND
   string orderInfo = 4; // Order description
   string returnUrl = 5; // Frontend callback URL
+  repeated int32 selectedCartIds = 6;
+  int32 addressId = 7;
 }
 
 message CreatePaymentResponse {
