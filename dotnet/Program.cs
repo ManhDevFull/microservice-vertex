@@ -201,6 +201,8 @@ builder.Services.AddCors(options =>
             "http://localhost:5200",
             "http://localhost:3000",
             "http://localhost:5296",
+            "http://localhost:5307", // PaymentService
+            "http://localhost:5308", // PaymentService gRPC
             "https://vertex-ecom.vercel.app")
               .AllowAnyHeader()
               .AllowAnyMethod()

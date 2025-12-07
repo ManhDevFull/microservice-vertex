@@ -35,6 +35,7 @@ namespace PaymentService.Data
                 e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
                 e.Property(x => x.PaidAt).HasColumnName("paid_at");
                 e.Property(x => x.SelectedCartIds).HasColumnName("selected_cart_ids");
+                e.Property(x => x.AddressId).HasColumnName("address_id");
                 
                 e.HasIndex(x => x.OrderId).IsUnique();
                 e.HasIndex(x => x.RequestId).IsUnique();

@@ -8,5 +8,6 @@ namespace PaymentService.Dtos
         public string? OrderId { get; set; }
         public int? AccountId { get; set; }
         public List<int>? SelectedCartIds { get; set; }
+        public int? AddressId { get; set; }
     }
 }

@@ -45,7 +45,7 @@ public class CartController : ControllerBase
         return Ok(data);
     }
 
-    [HttpPatch("quantity")]
+    [HttpPut("quantity")]
     public async Task<IActionResult> UpdateQuantity([FromBody] CartUpdateQtyDto request)
     {
         var accountId = ResolveAccountId();

@@ -24,10 +24,11 @@ namespace Payment.Grpc {
     static PaymentReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChRQcm90b3MvcGF5bWVudC5wcm90bxIHcGF5bWVudCJwChRDcmVhdGVQYXlt",
-            "ZW50UmVxdWVzdBIPCgdvcmRlcklkGAEgASgJEhEKCWFjY291bnRJZBgCIAEo",
-            "BRIOCgZhbW91bnQYAyABKAMSEQoJb3JkZXJJbmZvGAQgASgJEhEKCXJldHVy",
-            "blVybBgFIAEoCSJwChVDcmVhdGVQYXltZW50UmVzcG9uc2USDwoHc3VjY2Vz",
+            "ChRQcm90b3MvcGF5bWVudC5wcm90bxIHcGF5bWVudCKcAQoUQ3JlYXRlUGF5",
+            "bWVudFJlcXVlc3QSDwoHb3JkZXJJZBgBIAEoCRIRCglhY2NvdW50SWQYAiAB",
+            "KAUSDgoGYW1vdW50GAMgASgDEhEKCW9yZGVySW5mbxgEIAEoCRIRCglyZXR1",
+            "cm5VcmwYBSABKAkSFwoPc2VsZWN0ZWRDYXJ0SWRzGAYgAygFEhEKCWFkZHJl",
+            "c3NJZBgHIAEoBSJwChVDcmVhdGVQYXltZW50UmVzcG9uc2USDwoHc3VjY2Vz",
             "cxgBIAEoCBISCgpwYXltZW50VXJsGAIgASgJEg4KBnFyQ29kZRgDIAEoCRIR",
             "CglyZXF1ZXN0SWQYBCABKAkSDwoHbWVzc2FnZRgFIAEoCSIqChdHZXRQYXlt",
             "ZW50U3RhdHVzUmVxdWVzdBIPCgdvcmRlcklkGAEgASgJIooBChVQYXltZW50",
@@ -42,7 +43,7 @@ namespace Payment.Grpc {
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Payment.Grpc.CreatePaymentRequest), global::Payment.Grpc.CreatePaymentRequest.Parser, new[]{ "OrderId", "AccountId", "Amount", "OrderInfo", "ReturnUrl" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Payment.Grpc.CreatePaymentRequest), global::Payment.Grpc.CreatePaymentRequest.Parser, new[]{ "OrderId", "AccountId", "Amount", "OrderInfo", "ReturnUrl", "SelectedCartIds", "AddressId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Payment.Grpc.CreatePaymentResponse), global::Payment.Grpc.CreatePaymentResponse.Parser, new[]{ "Success", "PaymentUrl", "QrCode", "RequestId", "Message" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Payment.Grpc.GetPaymentStatusRequest), global::Payment.Grpc.GetPaymentStatusRequest.Parser, new[]{ "OrderId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Payment.Grpc.PaymentStatusResponse), global::Payment.Grpc.PaymentStatusResponse.Parser, new[]{ "OrderId", "Status", "MomoTransactionId", "ResponseCode", "Message", "Amount" }, null, null, null, null)
@@ -92,6 +93,8 @@ namespace Payment.Grpc {
       amount_ = other.amount_;
       orderInfo_ = other.orderInfo_;
       returnUrl_ = other.returnUrl_;
+      selectedCartIds_ = other.selectedCartIds_.Clone();
+      addressId_ = other.addressId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -170,6 +173,29 @@ namespace Payment.Grpc {
       }
     }
 
+    /// <summary>Field number for the "selectedCartIds" field.</summary>
+    public const int SelectedCartIdsFieldNumber = 6;
+    private static readonly pb::FieldCodec<int> _repeated_selectedCartIds_codec
+        = pb::FieldCodec.ForInt32(50);
+    private readonly pbc::RepeatedField<int> selectedCartIds_ = new pbc::RepeatedField<int>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<int> SelectedCartIds {
+      get { return selectedCartIds_; }
+    }
+
+    /// <summary>Field number for the "addressId" field.</summary>
+    public const int AddressIdFieldNumber = 7;
+    private int addressId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int AddressId {
+      get { return addressId_; }
+      set {
+        addressId_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -190,6 +216,8 @@ namespace Payment.Grpc {
       if (Amount != other.Amount) return false;
       if (OrderInfo != other.OrderInfo) return false;
       if (ReturnUrl != other.ReturnUrl) return false;
+      if(!selectedCartIds_.Equals(other.selectedCartIds_)) return false;
+      if (AddressId != other.AddressId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -202,6 +230,8 @@ namespace Payment.Grpc {
       if (Amount != 0L) hash ^= Amount.GetHashCode();
       if (OrderInfo.Length != 0) hash ^= OrderInfo.GetHashCode();
       if (ReturnUrl.Length != 0) hash ^= ReturnUrl.GetHashCode();
+      hash ^= selectedCartIds_.GetHashCode();
+      if (AddressId != 0) hash ^= AddressId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -240,6 +270,11 @@ namespace Payment.Grpc {
         output.WriteRawTag(42);
         output.WriteString(ReturnUrl);
       }
+      selectedCartIds_.WriteTo(output, _repeated_selectedCartIds_codec);
+      if (AddressId != 0) {
+        output.WriteRawTag(56);
+        output.WriteInt32(AddressId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -270,6 +305,11 @@ namespace Payment.Grpc {
         output.WriteRawTag(42);
         output.WriteString(ReturnUrl);
       }
+      selectedCartIds_.WriteTo(ref output, _repeated_selectedCartIds_codec);
+      if (AddressId != 0) {
+        output.WriteRawTag(56);
+        output.WriteInt32(AddressId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -294,6 +334,10 @@ namespace Payment.Grpc {
       }
       if (ReturnUrl.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ReturnUrl);
+      }
+      size += selectedCartIds_.CalculateSize(_repeated_selectedCartIds_codec);
+      if (AddressId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(AddressId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -321,6 +365,10 @@ namespace Payment.Grpc {
       }
       if (other.ReturnUrl.Length != 0) {
         ReturnUrl = other.ReturnUrl;
+      }
+      selectedCartIds_.Add(other.selectedCartIds_);
+      if (other.AddressId != 0) {
+        AddressId = other.AddressId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -357,6 +405,15 @@ namespace Payment.Grpc {
             ReturnUrl = input.ReadString();
             break;
           }
+          case 50:
+          case 48: {
+            selectedCartIds_.AddEntriesFrom(input, _repeated_selectedCartIds_codec);
+            break;
+          }
+          case 56: {
+            AddressId = input.ReadInt32();
+            break;
+          }
         }
       }
     #endif
@@ -390,6 +447,15 @@ namespace Payment.Grpc {
           }
           case 42: {
             ReturnUrl = input.ReadString();
+            break;
+          }
+          case 50:
+          case 48: {
+            selectedCartIds_.AddEntriesFrom(ref input, _repeated_selectedCartIds_codec);
+            break;
+          }
+          case 56: {
+            AddressId = input.ReadInt32();
             break;
           }
         }

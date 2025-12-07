@@ -39,6 +39,11 @@ namespace PaymentService.Grpc
 
                 // Generate unique request ID
                 var requestId = Guid.NewGuid().ToString();
+                
+                // Prepare extraData for MoMo (selectedCartIds)
+                var extraData = request.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+                    ? string.Join(",", request.SelectedCartIds.Distinct())
+                    : string.Empty;
 
                 // Create payment request to MoMo
                 var momoResult = await _momoService.CreatePaymentAsync(
@@ -46,7 +51,8 @@ namespace PaymentService.Grpc
                     orderId: request.OrderId,
                     amount: request.Amount,
                     orderInfo: request.OrderInfo,
-                    returnUrl: request.ReturnUrl
+                    returnUrl: request.ReturnUrl,
+                    extraData: extraData
                 );
 
                 if (!momoResult.Success)
@@ -59,22 +65,32 @@ namespace PaymentService.Grpc
                 }
 
                 // Save transaction to database
-                var transaction = new PaymentTransaction
+                var transaction = existing ?? new PaymentTransaction
                 {
-                    OrderId = request.OrderId,
-                    AccountId = request.AccountId,
-                    PartnerCode = _momoService.PartnerCode,
-                    RequestId = requestId,
-                    Amount = request.Amount,
-                    OrderInfo = request.OrderInfo,
-                    PaymentUrl = momoResult.PaymentUrl,
-                    QrCode = momoResult.QrCode,
-                    Status = "PENDING",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow
                 };
+                
+                transaction.OrderId = request.OrderId;
+                transaction.AccountId = request.AccountId;
+                transaction.PartnerCode = _momoService.PartnerCode;
+                transaction.RequestId = requestId;
+                transaction.Amount = request.Amount;
+                transaction.OrderInfo = request.OrderInfo;
+                transaction.PaymentUrl = momoResult.PaymentUrl;
+                transaction.QrCode = momoResult.QrCode;
+                transaction.Status = "PENDING";
+                transaction.SelectedCartIds = string.IsNullOrWhiteSpace(extraData) ? null : extraData;
+                transaction.AddressId = request.AddressId > 0 ? request.AddressId : null;
+                transaction.UpdatedAt = DateTime.UtcNow;
 
-                _db.PaymentTransactions.Add(transaction);
+                if (existing == null)
+                {
+                    _db.PaymentTransactions.Add(transaction);
+                }
+                else
+                {
+                    _db.PaymentTransactions.Update(transaction);
+                }
                 await _db.SaveChangesAsync();
 
                 return new CreatePaymentResponse
