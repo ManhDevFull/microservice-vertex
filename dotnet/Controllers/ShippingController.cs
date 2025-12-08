@@ -40,13 +40,16 @@ public class ShippingController : ControllerBase
         try
         {
             var res = await _paymentClient.GetProvidersAsync(new Shipping.Grpc.Empty());
+
             var list = res.Items.Select(p => new
             {
-                id = p.Id.ToString(),
+                id = p.Id,
+                code = p.Code,
                 name = p.Name,
-                desc = p.Description,
-                img = p.LogoUrl
+                description = p.Description,
+                logoUrl = p.LogoUrl
             }).ToList();
+
             return Ok(list);
         }
         catch (RpcException rpcEx)
@@ -118,22 +121,38 @@ public class ShippingController : ControllerBase
         try
         {
             var carriersRes = await _shippingClient.GetCarriersAsync(new Shipping.Grpc.Empty());
+
             var result = new List<object>();
 
             foreach (var carrier in carriersRes.Items)
             {
-                var optsRes = await _shippingClient.GetOptionsAsync(new Shipping.Grpc.GetOptionsRequest { CarrierCode = carrier.Code });
-                var firstOpt = optsRes.Items.FirstOrDefault();
-                if (firstOpt == null) continue;
+                var optsRes = await _shippingClient.GetOptionsAsync(
+                    new Shipping.Grpc.GetOptionsRequest { CarrierCode = carrier.Code });
+
+                var options = optsRes.Items
+                    .Select(o => new
+                    {
+                        id = o.Id,
+                        code = o.Code,
+                        name = o.Name,
+                        deliveryMinDays = o.DeliveryMinDays,
+                        deliveryMaxDays = o.DeliveryMaxDays,
+                        shippingCost = o.ShippingCost,
+                        insuranceAvailable = o.InsuranceAvailable
+                    })
+                    .ToList();
+
+                if (options.Count == 0)
+                {
+                    continue;
+                }
 
                 result.Add(new
                 {
                     id = carrier.Code,
                     name = carrier.Name,
-                    deliveryTime = $"{firstOpt.DeliveryMinDays}-{firstOpt.DeliveryMaxDays} days",
-                    shippingCost = firstOpt.ShippingCost == 0 ? "Free" : $"₹{firstOpt.ShippingCost}",
-                    insurance = firstOpt.InsuranceAvailable ? "Available" : "Unavailable",
-                    img = carrier.LogoUrl
+                    logoUrl = carrier.LogoUrl,
+                    options
                 });
             }
 
