@@ -26,8 +26,13 @@ namespace dotnet.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> CreateOrderFromPayment([FromBody] CreateOrderRequestDto request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Received create-order-from-payment request: OrderId={OrderId}, AccountId={AccountId}", 
-                request?.OrderId, request?.AccountId);
+            _logger.LogInformation("=== ORDER CREATION REQUEST RECEIVED ===");
+            _logger.LogInformation("OrderId={OrderId}, AccountId={AccountId}, AddressId={AddressId}, SelectedCartIds={SelectedCartIds}", 
+                request?.OrderId, request?.AccountId, request?.AddressId, 
+                request?.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
+                    ? string.Join(",", request.SelectedCartIds) 
+                    : "null/empty");
+            _logger.LogInformation("Request body: {Request}", System.Text.Json.JsonSerializer.Serialize(request));
             
             if (request == null)
             {

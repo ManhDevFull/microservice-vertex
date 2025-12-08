@@ -63,6 +63,8 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IWishListRepository, WishListRepository>();
+builder.Services.AddScoped<IWishListService, WishListService>();
 
 // Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
@@ -199,6 +201,8 @@ builder.Services.AddCors(options =>
             "http://localhost:5200",
             "http://localhost:3000",
             "http://localhost:5296",
+            "http://localhost:5307", // PaymentService
+            "http://localhost:5308", // PaymentService gRPC
             "https://vertex-ecom.vercel.app")
               .AllowAnyHeader()
               .AllowAnyMethod()

@@ -54,11 +54,19 @@ namespace dotnet.Repository
 
             var cartItems = await cartQuery.ToListAsync(cancellationToken);
 
-            _logger.LogInformation("Found {Count} cart items for account {AccountId}", cartItems.Count, accountId);
+            _logger.LogInformation("Found {Count} cart items for account {AccountId}. SelectedCartIds: {SelectedCartIds}", 
+                cartItems.Count, accountId, 
+                request.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
+                    ? string.Join(",", request.SelectedCartIds) 
+                    : "all items");
 
             if (cartItems.Count == 0)
             {
-                _logger.LogWarning("Cart is empty for account {AccountId}", accountId);
+                _logger.LogWarning("Cart is empty for account {AccountId}. SelectedCartIds: {SelectedCartIds}", 
+                    accountId, 
+                    request.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
+                        ? string.Join(",", request.SelectedCartIds) 
+                        : "all items");
                 throw new InvalidOperationException($"Cart is empty for account {accountId}.");
             }
 
@@ -816,19 +824,23 @@ namespace dotnet.Repository
 
     private async Task<int> ResolveAddressAsync(int accountId, CreateOrderRequestDto request, CancellationToken cancellationToken)
     {
-      if (request.AddressId.HasValue)
+      if (request.AddressId.HasValue && request.AddressId.Value > 0)
       {
+        _logger.LogInformation("Resolving address by ID: {AddressId} for account {AccountId}", request.AddressId.Value, accountId);
         var existingAddress = await _connect.address
           .FirstOrDefaultAsync(a => a.id == request.AddressId.Value && a.accountid == accountId, cancellationToken);
 
         if (existingAddress == null)
         {
-          throw new KeyNotFoundException("Address not found for this account.");
+          _logger.LogWarning("Address {AddressId} not found for account {AccountId}, will create new address", request.AddressId.Value, accountId);
+          throw new KeyNotFoundException($"Address {request.AddressId.Value} not found for this account.");
         }
 
+        _logger.LogInformation("Found existing address: {AddressId}", existingAddress.id);
         return existingAddress.id;
       }
 
+      _logger.LogInformation("AddressId not provided, creating new address from CustomerInfo for account {AccountId}", accountId);
       var info = NormalizeCustomerInfo(request.CustomerInfo);
       var recipientName = $"{info.FirstName} {info.LastName}".Trim();
       if (string.IsNullOrWhiteSpace(recipientName))
@@ -851,6 +863,7 @@ namespace dotnet.Repository
 
       _connect.address.Add(address);
       await _connect.SaveChangesAsync(cancellationToken);
+      _logger.LogInformation("Created new address: {AddressId} for account {AccountId}", address.id, accountId);
       return address.id;
     }
 
