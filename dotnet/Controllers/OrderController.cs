@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -14,7 +14,7 @@ namespace dotnet.Controllers
     [ApiController]
     [Route("[controller]")]
     [Route("api/[controller]")]
-    [Authorize] // YÃªu cáº§u pháº£i Ä‘Äƒng nháº­p
+    [Authorize] // Yêu cầu phải đăng nhập
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -31,13 +31,13 @@ namespace dotnet.Controllers
         public async Task<IActionResult> CreateOrderFromPayment([FromBody] CreateOrderRequestDto request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("=== ORDER CREATION REQUEST RECEIVED ===");
-            _logger.LogInformation("OrderId={OrderId}, AccountId={AccountId}, AddressId={AddressId}, SelectedCartIds={SelectedCartIds}", 
-                request?.OrderId, request?.AccountId, request?.AddressId, 
-                request?.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
-                    ? string.Join(",", request.SelectedCartIds) 
+            _logger.LogInformation("OrderId={OrderId}, AccountId={AccountId}, AddressId={AddressId}, SelectedCartIds={SelectedCartIds}",
+                request?.OrderId, request?.AccountId, request?.AddressId,
+                request?.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+                    ? string.Join(",", request.SelectedCartIds)
                     : "null/empty");
             _logger.LogInformation("Request body: {Request}", System.Text.Json.JsonSerializer.Serialize(request));
-            
+
             if (request == null)
             {
                 _logger.LogWarning("Request body is null");
@@ -67,7 +67,7 @@ namespace dotnet.Controllers
             {
                 _logger.LogInformation("Creating order for account {AccountId} with OrderId {OrderId}", accountId, request.OrderId);
                 var result = await _orderService.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
-                _logger.LogInformation("Order created successfully: OrderId={OrderId}, Items={Items}, CartCleared={CartCleared}", 
+                _logger.LogInformation("Order created successfully: OrderId={OrderId}, Items={Items}, CartCleared={CartCleared}",
                     result.OrderId, result.Items, result.CartCleared);
                 return Ok(result);
             }
@@ -83,7 +83,7 @@ namespace dotnet.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating orders from payment for account {AccountId}: {Message}, StackTrace: {StackTrace}", 
+                _logger.LogError(ex, "Error creating orders from payment for account {AccountId}: {Message}, StackTrace: {StackTrace}",
                     accountId, ex.Message, ex.StackTrace);
                 return StatusCode(500, new { error = "Internal server error." });
             }
@@ -95,46 +95,46 @@ namespace dotnet.Controllers
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!int.TryParse(userIdString, out var userId))
             {
-                return Unauthorized("KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh ngÆ°á»i dÃ¹ng.");
+                return Unauthorized("Không thể xác định người dùng.");
             }
 
             try
             {
                 var orders = await _orderService.GetOrderHistoryAsync(userId);
-                return Ok(orders); // Tráº£ vá» danh sÃ¡ch Ä‘Æ¡n hÃ ng
+                return Ok(orders); // Trả về danh sách đơn hàng
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lá»—i khi láº¥y lá»‹ch sá»­ Ä‘Æ¡n hÃ ng cho User ID {UserId}", userId);
-                return StatusCode(500, new { message = "Lá»—i server khi láº¥y lá»‹ch sá»­ Ä‘Æ¡n hÃ ng." });
+                _logger.LogError(ex, "Lỗi khi lấy lịch sử đơn hàng cho User ID {UserId}", userId);
+                return StatusCode(500, new { message = "Lỗi server khi lấy lịch sử đơn hàng." });
             }
         }
 
         [HttpGet("my-orders/{orderId}")]
         public async Task<IActionResult> GetMyOrderDetail(int orderId)
         {
-            // 1. Láº¥y userId tá»« Token
+            // 1. Lấy userId từ Token
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!int.TryParse(userIdString, out var userId))
             {
-                return Unauthorized("KhÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh ngÆ°á»i dÃ¹ng.");
+                return Unauthorized("Không thể xác định người dùng.");
             }
 
             try
             {
-                // 2. Gá»i Service láº¥y chi tiáº¿t
+                // 2. Gọi Service lấy chi tiết
                 var orderDetail = await _orderService.GetOrderDetailAsync(orderId);
 
-                // 3. Kiá»ƒm tra tá»“n táº¡i
+                // 3. Kiểm tra tồn tại
                 if (orderDetail == null)
                 {
-                    return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng." });
+                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
                 }
 
-                // 4. QUAN TRá»ŒNG: Kiá»ƒm tra báº£o máº­t (Chá»‰ xem Ä‘Æ¡n cá»§a chÃ­nh mÃ¬nh)
+                // 4. QUAN TRỌNG: Kiểm tra bảo mật (Chỉ xem đơn của chính mình)
                 if (orderDetail.accountid != userId)
                 {
-                    return NotFound(new { message = "KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng." });
+                    return NotFound(new { message = "Không tìm thấy đơn hàng." });
                 }
 
                 // 5. Return mapped detail for frontend
