@@ -13,6 +13,7 @@ namespace dotnet.Repository.IRepository
     Task<IEnumerable<Address>> GetAddressesByUserIdAsync(int userId);
 
     Task<Address?> GetAddressByIdAsync(int id);
+    Task<Address?> GetAddressWithOrdersAsync(int id);
 
     Task<Address> CreateAddressAsync(Address address);
 

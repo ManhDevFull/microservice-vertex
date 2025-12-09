@@ -181,9 +181,12 @@ namespace dotnet.Controllers
             }
 
             var address = order.address;
-            var fullAddress = string.Join(", ", new[] { address?.detail, address?.description }
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!.Trim()));
+            var addressParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(address?.detail)) addressParts.Add(address!.detail!.Trim());
+            if (!string.IsNullOrWhiteSpace(address?.description)) addressParts.Add(address!.description!.Trim());
+            if (address?.codeward > 0) addressParts.Add(address.codeward.ToString());
+            addressParts.Add("Việt Nam");
+            var fullAddress = string.Join(", ", addressParts.Where(x => !string.IsNullOrWhiteSpace(x)));
 
             return new OrderDetailResponseDto
             {
@@ -200,6 +203,8 @@ namespace dotnet.Controllers
                     Title = address?.title ?? string.Empty,
                     NameRecipient = address?.namerecipient ?? string.Empty,
                     Tel = address?.tel ?? string.Empty,
+                    Detail = address?.detail ?? string.Empty,
+                    Description = address?.description ?? string.Empty,
                     FullAddress = fullAddress
                 },
                 Items = items

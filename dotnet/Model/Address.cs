@@ -11,6 +11,7 @@ public class Address
     public string? detail { get; set; }
     public DateTime? createdate { get; set; }
     public DateTime? updatedate { get; set; }
+    public bool? isdeleted { get; set; }
 
     public Account account { get; set; } = null!;
     public ICollection<Order> orders { get; set; } = new List<Order>();

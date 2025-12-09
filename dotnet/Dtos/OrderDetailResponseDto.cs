@@ -21,6 +21,8 @@ namespace dotnet.Dtos
     public string Title { get; set; } = string.Empty;
     public string NameRecipient { get; set; } = string.Empty;
     public string Tel { get; set; } = string.Empty;
+    public string Detail { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public string FullAddress { get; set; } = string.Empty;
   }
 
