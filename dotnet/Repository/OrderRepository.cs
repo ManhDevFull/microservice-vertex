@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using be_dotnet_ecommerce1.Data;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Dtos.track_order;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
@@ -15,141 +16,141 @@ using Npgsql;
 
 namespace dotnet.Repository
 {
-    public class OrderRepository : IOrderRepository
+  public class OrderRepository : IOrderRepository
+  {
+    private readonly ConnectData _connect;
+    private readonly ILogger<OrderRepository> _logger;
+
+    public OrderRepository(ConnectData connect, ILogger<OrderRepository> logger)
     {
-        private readonly ConnectData _connect;
-        private readonly ILogger<OrderRepository> _logger;
-        
-        public OrderRepository(ConnectData connect, ILogger<OrderRepository> logger)
+      _connect = connect;
+      _logger = logger;
+    }
+
+    public async Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
+      int accountId,
+      CreateOrderRequestDto request,
+      CancellationToken cancellationToken = default)
+    {
+      if (request == null)
+      {
+        throw new ArgumentNullException(nameof(request));
+      }
+
+      if (string.IsNullOrWhiteSpace(request.OrderId))
+      {
+        throw new InvalidOperationException("OrderId is required.");
+      }
+
+      _logger.LogInformation("Creating order from cart for account {AccountId}, OrderId: {OrderId}", accountId, request.OrderId);
+
+      var cartQuery = _connect.shoppingCarts
+          .Where(sc => sc.accountid == accountId);
+
+      if (request.SelectedCartIds != null && request.SelectedCartIds.Count > 0)
+      {
+        var ids = request.SelectedCartIds.Distinct().ToList();
+        cartQuery = cartQuery.Where(sc => ids.Contains(sc.id));
+      }
+
+      var cartItems = await cartQuery.ToListAsync(cancellationToken);
+
+      _logger.LogInformation("Found {Count} cart items for account {AccountId}. SelectedCartIds: {SelectedCartIds}",
+          cartItems.Count, accountId,
+          request.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+              ? string.Join(",", request.SelectedCartIds)
+              : "all items");
+
+      if (cartItems.Count == 0)
+      {
+        _logger.LogWarning("Cart is empty for account {AccountId}. SelectedCartIds: {SelectedCartIds}",
+            accountId,
+            request.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+                ? string.Join(",", request.SelectedCartIds)
+                : "all items");
+        throw new InvalidOperationException($"Cart is empty for account {accountId}.");
+      }
+
+      await using var transaction = await _connect.Database.BeginTransactionAsync(cancellationToken);
+
+      int addressId;
+      Order order;
+      List<OrderDetail> orderDetails;
+      bool clearCart;
+
+      try
+      {
+        _logger.LogInformation("Resolving address for account {AccountId}", accountId);
+        addressId = await ResolveAddressAsync(accountId, request, cancellationToken);
+        _logger.LogInformation("Address resolved: {AddressId}", addressId);
+
+        order = new Order
         {
-            _connect = connect;
-            _logger = logger;
+          accountid = accountId,
+          addressid = addressId,
+          orderdate = DateTime.UtcNow,
+          statusorder = "PENDING",
+          typepay = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "MOMO" : request.PaymentMethod!.Trim(),
+          statuspay = "PAID"
+        };
+
+        _connect.orders.Add(order);
+        await _connect.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Order created with ID: {OrderId}", order.id);
+
+        orderDetails = cartItems.Select(item => new OrderDetail
+        {
+          order_id = order.id,
+          variant_id = item.variantid,
+          quantity = Math.Max(1, item.quantity)
+        }).ToList();
+
+        _connect.orderdetails.AddRange(orderDetails);
+        await _connect.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Created {Count} order details", orderDetails.Count);
+
+        clearCart = request.ClearCart ?? true;
+        if (clearCart)
+        {
+          _logger.LogInformation("Clearing {Count} cart items for account {AccountId}", cartItems.Count, accountId);
+          _connect.shoppingCarts.RemoveRange(cartItems);
+          await _connect.SaveChangesAsync(cancellationToken);
+          _logger.LogInformation("Cart cleared successfully");
+        }
+        else
+        {
+          _logger.LogInformation("Cart clearing skipped (ClearCart=false)");
         }
 
-        public async Task<CreateOrderResponseDto> CreateOrdersFromCartAsync(
-          int accountId,
-          CreateOrderRequestDto request,
-          CancellationToken cancellationToken = default)
-        {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
+        await transaction.CommitAsync(cancellationToken);
+        _logger.LogInformation("Transaction committed successfully for order {OrderId}", order.id);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error creating order: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
+        await transaction.RollbackAsync(cancellationToken);
+        _logger.LogWarning("Transaction rolled back due to error");
+        throw;
+      }
 
-            if (string.IsNullOrWhiteSpace(request.OrderId))
-            {
-                throw new InvalidOperationException("OrderId is required.");
-            }
+      return new CreateOrderResponseDto
+      {
+        Success = true,
+        OrderToken = request.OrderId,
+        OrderId = order.id,
+        AddressId = addressId,
+        Items = orderDetails.Count,
+        PaymentMethod = order.typepay ?? string.Empty,
+        StatusOrder = order.statusorder ?? string.Empty,
+        StatusPay = order.statuspay ?? string.Empty,
+        CartCleared = clearCart,
+        OrderDetailIds = orderDetails.Select(od => od.id).ToList()
+      };
+    }
 
-            _logger.LogInformation("Creating order from cart for account {AccountId}, OrderId: {OrderId}", accountId, request.OrderId);
-            
-            var cartQuery = _connect.shoppingCarts
-                .Where(sc => sc.accountid == accountId);
-
-            if (request.SelectedCartIds != null && request.SelectedCartIds.Count > 0)
-            {
-                var ids = request.SelectedCartIds.Distinct().ToList();
-                cartQuery = cartQuery.Where(sc => ids.Contains(sc.id));
-            }
-
-            var cartItems = await cartQuery.ToListAsync(cancellationToken);
-
-            _logger.LogInformation("Found {Count} cart items for account {AccountId}. SelectedCartIds: {SelectedCartIds}", 
-                cartItems.Count, accountId, 
-                request.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
-                    ? string.Join(",", request.SelectedCartIds) 
-                    : "all items");
-
-            if (cartItems.Count == 0)
-            {
-                _logger.LogWarning("Cart is empty for account {AccountId}. SelectedCartIds: {SelectedCartIds}", 
-                    accountId, 
-                    request.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
-                        ? string.Join(",", request.SelectedCartIds) 
-                        : "all items");
-                throw new InvalidOperationException($"Cart is empty for account {accountId}.");
-            }
-
-            await using var transaction = await _connect.Database.BeginTransactionAsync(cancellationToken);
-
-            int addressId;
-            Order order;
-            List<OrderDetail> orderDetails;
-            bool clearCart;
-
-            try
-            {
-                _logger.LogInformation("Resolving address for account {AccountId}", accountId);
-                addressId = await ResolveAddressAsync(accountId, request, cancellationToken);
-                _logger.LogInformation("Address resolved: {AddressId}", addressId);
-
-                order = new Order
-                {
-                    accountid = accountId,
-                    addressid = addressId,
-                    orderdate = DateTime.UtcNow,
-                    statusorder = "PENDING",
-                    typepay = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "MOMO" : request.PaymentMethod!.Trim(),
-                    statuspay = "PAID"
-                };
-
-                _connect.orders.Add(order);
-                await _connect.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Order created with ID: {OrderId}", order.id);
-
-                orderDetails = cartItems.Select(item => new OrderDetail
-                {
-                    order_id = order.id,
-                    variant_id = item.variantid,
-                    quantity = Math.Max(1, item.quantity)
-                }).ToList();
-
-                _connect.orderdetails.AddRange(orderDetails);
-                await _connect.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Created {Count} order details", orderDetails.Count);
-
-                clearCart = request.ClearCart ?? true;
-                if (clearCart)
-                {
-                    _logger.LogInformation("Clearing {Count} cart items for account {AccountId}", cartItems.Count, accountId);
-                    _connect.shoppingCarts.RemoveRange(cartItems);
-                    await _connect.SaveChangesAsync(cancellationToken);
-                    _logger.LogInformation("Cart cleared successfully");
-                }
-                else
-                {
-                    _logger.LogInformation("Cart clearing skipped (ClearCart=false)");
-                }
-
-                await transaction.CommitAsync(cancellationToken);
-                _logger.LogInformation("Transaction committed successfully for order {OrderId}", order.id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating order: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
-                await transaction.RollbackAsync(cancellationToken);
-                _logger.LogWarning("Transaction rolled back due to error");
-                throw;
-            }
-
-            return new CreateOrderResponseDto
-            {
-                Success = true,
-                OrderToken = request.OrderId,
-                OrderId = order.id,
-                AddressId = addressId,
-                Items = orderDetails.Count,
-                PaymentMethod = order.typepay ?? string.Empty,
-                StatusOrder = order.statusorder ?? string.Empty,
-                StatusPay = order.statuspay ?? string.Empty,
-                CartCleared = clearCart,
-                OrderDetailIds = orderDetails.Select(od => od.id).ToList()
-            };
-        }
-
-        public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
-        {
-            var sql = @"
+    public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
+    {
+      var sql = @"
                 SELECT
                     o.id AS ""OrderId"",
                     o.orderdate AS ""OrderDate"",
@@ -175,15 +176,15 @@ namespace dotnet.Repository
                 ORDER BY o.id DESC;
             ";
 
-            var accountIdParam = new NpgsqlParameter("@accountId", accountId);
+      var accountIdParam = new NpgsqlParameter("@accountId", accountId);
 
-            var orders = await _connect.Database
-                                   .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
-                                   .AsNoTracking()
-                                   .ToListAsync();
+      var orders = await _connect.Database
+                             .SqlQueryRaw<OrderHistoryDTO>(sql, accountIdParam)
+                             .AsNoTracking()
+                             .ToListAsync();
 
-            return orders;
-        }
+      return orders;
+    }
 
 
     public async Task<PagedResult<Order>> GetOrdersAsync(
@@ -905,6 +906,49 @@ namespace dotnet.Repository
       }
 
       return string.Join(", ", parts);
+    }
+    // lấy ra trackOrder
+    public async Task<ICollection<TrackOrderDTO>> getTrackOrder(int idAccount)
+    {
+      var sql = @$"
+              SELECT
+                  o.id            AS ""idOrder"",
+                  o.account_id    AS ""idAccount"",
+                  p.id            AS ""idProduct"",
+                  o.statusorder   As ""status"",
+                  p.nameproduct   AS ""nameProduct"",
+                  p.description   AS ""description"",
+                  p.imageurls     AS ""imgUrls"",
+                  v.price         AS ""price"",
+                  od.quantity     AS ""quantity"",
+                  (od.quantity * v.price) AS ""subtotal""
+              FROM orders o
+              JOIN orderdetail od ON o.id = od.order_id
+              JOIN variant v ON od.variant_id = v.id
+              JOIN product p ON v.product_id = p.id
+              WHERE o.account_id = {idAccount};";
+
+      var rs = await _connect.trackOrderDTOs.FromSqlRaw(sql).ToListAsync();
+      return rs;
+    }
+
+    public async Task<ICollection<TimeLineDTO>> getTimeLine(int idOrder, int idAccount)
+    {
+      var sql = @"
+              SELECT
+                  o.id            AS ""idOrder"",
+                  o.orderdate     AS ""orderdate"",
+                  o.receivedate   AS ""receivedate"",
+                  o.statusorder   AS ""status"",
+                  SUM(od.quantity) AS ""totalProduct""
+              FROM orders o
+              JOIN orderdetail od ON o.id = od.order_id
+              WHERE o.account_id = {0}
+              AND o.id = {1}
+              GROUP BY o.id, o.orderdate, o.receivedate, o.statusorder;
+              ";
+      var rs = await _connect.timeLineDTOs.FromSqlRaw(sql, idAccount, idOrder).ToListAsync();
+      return rs;
     }
   }
 }

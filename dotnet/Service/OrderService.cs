@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Dtos.track_order;
 using dotnet.Model;
 using dotnet.Repository.IRepository;
 using dotnet.Service.IService;
@@ -58,5 +59,11 @@ namespace dotnet.Service
     {
       return _repo.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
     }
-  }
+
+        public async Task<ICollection<TrackOrderDTO>> getTrackOrder(int id)
+        {
+            var rs = await _repo.getTrackOrder(id);
+            return rs;
+        }
+    }
 }

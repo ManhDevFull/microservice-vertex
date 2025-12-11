@@ -4,12 +4,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Dtos.track_order;
 using dotnet.Model;
 
 namespace dotnet.Service.IService
 {
   public interface IOrderService
   {
+    Task <ICollection<TrackOrderDTO>> getTrackOrder(int id);
     Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId);
 
     Task<PagedResult<Order>> GetOrdersAsync(

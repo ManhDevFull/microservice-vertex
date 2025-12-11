@@ -27,13 +27,13 @@ namespace dotnet.Controllers
         public async Task<IActionResult> CreateOrderFromPayment([FromBody] CreateOrderRequestDto request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("=== ORDER CREATION REQUEST RECEIVED ===");
-            _logger.LogInformation("OrderId={OrderId}, AccountId={AccountId}, AddressId={AddressId}, SelectedCartIds={SelectedCartIds}", 
-                request?.OrderId, request?.AccountId, request?.AddressId, 
-                request?.SelectedCartIds != null && request.SelectedCartIds.Count > 0 
-                    ? string.Join(",", request.SelectedCartIds) 
+            _logger.LogInformation("OrderId={OrderId}, AccountId={AccountId}, AddressId={AddressId}, SelectedCartIds={SelectedCartIds}",
+                request?.OrderId, request?.AccountId, request?.AddressId,
+                request?.SelectedCartIds != null && request.SelectedCartIds.Count > 0
+                    ? string.Join(",", request.SelectedCartIds)
                     : "null/empty");
             _logger.LogInformation("Request body: {Request}", System.Text.Json.JsonSerializer.Serialize(request));
-            
+
             if (request == null)
             {
                 _logger.LogWarning("Request body is null");
@@ -63,7 +63,7 @@ namespace dotnet.Controllers
             {
                 _logger.LogInformation("Creating order for account {AccountId} with OrderId {OrderId}", accountId, request.OrderId);
                 var result = await _orderService.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
-                _logger.LogInformation("Order created successfully: OrderId={OrderId}, Items={Items}, CartCleared={CartCleared}", 
+                _logger.LogInformation("Order created successfully: OrderId={OrderId}, Items={Items}, CartCleared={CartCleared}",
                     result.OrderId, result.Items, result.CartCleared);
                 return Ok(result);
             }
@@ -79,7 +79,7 @@ namespace dotnet.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating orders from payment for account {AccountId}: {Message}, StackTrace: {StackTrace}", 
+                _logger.LogError(ex, "Error creating orders from payment for account {AccountId}: {Message}, StackTrace: {StackTrace}",
                     accountId, ex.Message, ex.StackTrace);
                 return StatusCode(500, new { error = "Internal server error." });
             }
@@ -105,7 +105,25 @@ namespace dotnet.Controllers
                 return StatusCode(500, new { message = "Lỗi server khi lấy lịch sử đơn hàng." });
             }
         }
-
+        [HttpGet("my-track-order")]
+        public async Task<IActionResult> getMyTrackOrder()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier); // lấy id người dùng thông qua token
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized("Không thể xác định người dùng");
+            }
+            try
+            {
+                var rs = await _orderService.getTrackOrder(userId);
+                return Ok(rs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy track order của user {UserId}", userId);
+                return StatusCode(500, new { message = "Lỗi server." });
+            }
+        }
         [HttpGet("my-orders/{orderId}")]
         public async Task<IActionResult> GetMyOrderDetail(int orderId)
         {
@@ -142,6 +160,6 @@ namespace dotnet.Controllers
                 return StatusCode(500, new { message = "Lỗi server khi lấy chi tiết đơn hàng." });
             }
         }
-           
+
     }
 }
