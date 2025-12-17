@@ -124,6 +124,23 @@ namespace dotnet.Controllers
                 return StatusCode(500, new { message = "Lỗi server." });
             }
         }
+        [HttpGet("time-line/{idorder}")]
+        public async Task<IActionResult> getTimeLine(int idorder)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userId, out var id))
+                return Unauthorized("Không thể xác định người dùng");
+            try
+            {
+                var rs = await _orderService.getTimeLineByIdOrder(idorder);
+                return Ok(rs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "lỗi khi lấy timeline", userId);
+                return StatusCode(500, new { message = "Lỗi server." });
+            }
+        }
         [HttpGet("my-orders/{orderId}")]
         public async Task<IActionResult> GetMyOrderDetail(int orderId)
         {

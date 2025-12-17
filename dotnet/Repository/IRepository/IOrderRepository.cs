@@ -12,7 +12,7 @@ namespace dotnet.Repository.IRepository
   public interface IOrderRepository
   {
     Task <ICollection<TrackOrderDTO>> getTrackOrder(int idAccount);
-    Task <ICollection<TimeLineDTO>> getTimeLine(int idOrder, int idAccount);
+    Task <TimeLineDTO>getTimeLineByIdOrder(int idOrder);
     Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId);
 
     Task<PagedResult<Order>> GetOrdersAsync(

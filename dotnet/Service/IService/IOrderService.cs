@@ -12,6 +12,7 @@ namespace dotnet.Service.IService
   public interface IOrderService
   {
     Task <ICollection<TrackOrderDTO>> getTrackOrder(int id);
+    Task <TimeLineDTO> getTimeLineByIdOrder(int idOrder);
     Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId);
 
     Task<PagedResult<Order>> GetOrdersAsync(

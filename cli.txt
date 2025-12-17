@@ -1,8 +1,4 @@
 docker build -t confictmicro .
 docker run --rm -p 5200:5200 --env-file .env.runtime confictmicro
 
-SELECT o.id, o.account_id, o.orderdate, od.quantity, o.price, p.id, subtotal as od.quantity * o.price
- from orders as o JOIN orderdetail as od ON (o.id = od.order_id)
-JOIN variant as v ON (od.variant_id = v.id)
-JOIN product as p ON (v.product_id = p.id)
-WHERE o.account_id = 1
+

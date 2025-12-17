@@ -11,18 +11,18 @@ using dotnet.Service.IService;
 
 namespace dotnet.Service
 {
-    public class OrderService : IOrderService
+  public class OrderService : IOrderService
+  {
+    private readonly IOrderRepository _repo;
+    public OrderService(IOrderRepository repo)
     {
-        private readonly IOrderRepository _repo;
-        public OrderService(IOrderRepository repo)
-        {
-            _repo = repo;
-        }
+      _repo = repo;
+    }
 
-        public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
-        {
-            return await _repo.GetOrderHistoryAsync(accountId);
-        }
+    public async Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId)
+    {
+      return await _repo.GetOrderHistoryAsync(accountId);
+    }
 
     public Task<PagedResult<Order>> GetOrdersAsync(
         int page,
@@ -60,10 +60,17 @@ namespace dotnet.Service
       return _repo.CreateOrdersFromCartAsync(accountId, request, cancellationToken);
     }
 
-        public async Task<ICollection<TrackOrderDTO>> getTrackOrder(int id)
-        {
-            var rs = await _repo.getTrackOrder(id);
-            return rs;
-        }
+    public async Task<ICollection<TrackOrderDTO>> getTrackOrder(int id)
+    {
+      var rs = await _repo.getTrackOrder(id);
+      return rs;
     }
+
+    public Task<TimeLineDTO> getTimeLineByIdOrder(int idOrder)
+    {
+      var rs = _repo.getTimeLineByIdOrder(idOrder);
+      return rs;
+    }
+
+  }
 }

@@ -910,45 +910,55 @@ namespace dotnet.Repository
     // lấy ra trackOrder
     public async Task<ICollection<TrackOrderDTO>> getTrackOrder(int idAccount)
     {
-      var sql = @$"
-              SELECT
-                  o.id            AS ""idOrder"",
-                  o.account_id    AS ""idAccount"",
-                  p.id            AS ""idProduct"",
-                  o.statusorder   As ""status"",
-                  p.nameproduct   AS ""nameProduct"",
-                  p.description   AS ""description"",
-                  p.imageurls     AS ""imgUrls"",
-                  v.price         AS ""price"",
-                  od.quantity     AS ""quantity"",
-                  (od.quantity * v.price) AS ""subtotal""
-              FROM orders o
-              JOIN orderdetail od ON o.id = od.order_id
-              JOIN variant v ON od.variant_id = v.id
-              JOIN product p ON v.product_id = p.id
-              WHERE o.account_id = {idAccount};";
+      var sql = @$"SELECT
+    o.id AS ""idOrder"",
+    o.account_id AS ""idAccount"",
+    o.statusorder AS ""status"",
+    o.orderdate AS ""sendorder"",
+    COALESCE(SUM(od.quantity * v.price), 0) AS ""totalPrice""
+    FROM orders o
+    LEFT JOIN orderdetail od ON o.id = od.order_id
+    LEFT JOIN variant v ON od.variant_id = v.id
+    WHERE o.account_id = {idAccount}
+    AND o.statusorder NOT IN ('DELIVERED', 'CANCELLED')
+    GROUP BY
+        o.id,
+        o.account_id,
+        o.statusorder,
+        o.orderdate
+    ORDER BY o.orderdate DESC;
+";
 
       var rs = await _connect.trackOrderDTOs.FromSqlRaw(sql).ToListAsync();
       return rs;
     }
 
-    public async Task<ICollection<TimeLineDTO>> getTimeLine(int idOrder, int idAccount)
-    {
-      var sql = @"
-              SELECT
-                  o.id            AS ""idOrder"",
-                  o.orderdate     AS ""orderdate"",
-                  o.receivedate   AS ""receivedate"",
-                  o.statusorder   AS ""status"",
-                  SUM(od.quantity) AS ""totalProduct""
-              FROM orders o
-              JOIN orderdetail od ON o.id = od.order_id
-              WHERE o.account_id = {0}
-              AND o.id = {1}
-              GROUP BY o.id, o.orderdate, o.receivedate, o.statusorder;
-              ";
-      var rs = await _connect.timeLineDTOs.FromSqlRaw(sql, idAccount, idOrder).ToListAsync();
-      return rs;
-    }
+public async Task<TimeLineDTO?> getTimeLineByIdOrder(int idOrder)
+{
+    var sql = @"
+        SELECT
+            o.id AS ""idOrder"",
+            o.statusorder AS ""status"",
+            o.orderdate AS ""orderdate"",
+            o.receivedate AS ""receivedate"",
+            COALESCE(SUM(od.quantity * v.price), 0) AS ""totalPrice"",
+            COALESCE(SUM(od.quantity), 0) AS ""totalQuantity""
+        FROM orders o
+        LEFT JOIN orderdetail od ON o.id = od.order_id
+        LEFT JOIN variant v ON od.variant_id = v.id
+        WHERE o.id = {0}
+        GROUP BY
+            o.id,
+            o.statusorder,
+            o.orderdate,
+            o.receivedate
+    ";
+
+    return await _connect.timeLineDTOs
+        .FromSqlRaw(sql, idOrder)
+        .AsNoTracking()
+        .FirstOrDefaultAsync();
+}
+
   }
 }
