@@ -1,2 +1,4 @@
 docker build -t confictmicro .
 docker run --rm -p 5200:5200 --env-file .env.runtime confictmicro
+
+

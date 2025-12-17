@@ -204,5 +204,22 @@ namespace dotnet.Service
       var rs = await _repo.getProductById(id);
       return rs;
     }
+
+    public async Task<ICollection<ProductFilterDTO>> getProductFrequentlyGrid(int id)
+    {
+      // lấy ra danh sách category bằng id
+      var categories = await _categoryRepository.getCateById(id);
+      // lấy danh sách category con 
+      var subIdCate = categories.Select(c => c._id).ToList();
+      // nối chuỗi bằng ,
+      var inClause = string.Join(",", subIdCate);
+      var sql = $@"
+          SELECT * from v_products_filter
+          WHERE categoryid IN ({inClause})
+          LIMIT 12
+        ";
+      var products = await _repo.getProductBySql(sql);
+      return products;
+    }
   }
 }

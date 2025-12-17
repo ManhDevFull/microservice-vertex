@@ -2,3 +2,9 @@
 **/bin/
 **/obj/
 .env.runtime
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.db
+*.cache

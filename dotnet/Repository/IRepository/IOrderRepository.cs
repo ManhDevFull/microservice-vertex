@@ -5,11 +5,14 @@ using System.Threading;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
 using dotnet.Model;
+using dotnet.Dtos.track_order;
 
 namespace dotnet.Repository.IRepository
 {
   public interface IOrderRepository
   {
+    Task <ICollection<TrackOrderDTO>> getTrackOrder(int idAccount);
+    Task <TimeLineDTO>getTimeLineByIdOrder(int idOrder);
     Task<IEnumerable<OrderHistoryDTO>> GetOrderHistoryAsync(int accountId);
 
     Task<PagedResult<Order>> GetOrdersAsync(
