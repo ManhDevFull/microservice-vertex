@@ -5,11 +5,15 @@ using System.Security.Claims;
 using System.Threading;
 using dotnet.Dtos;
 using dotnet.Service.IService;
+using dotnet.Model;
+using System.Linq;
+using System.Text.Json;
 
 namespace dotnet.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Route("api/[controller]")]
     [Authorize] // Yêu cầu phải đăng nhập
     public class OrderController : ControllerBase
     {
@@ -168,8 +172,9 @@ namespace dotnet.Controllers
                     return NotFound(new { message = "Không tìm thấy đơn hàng." });
                 }
 
-                // 5. Trả về
-                return Ok(orderDetail);
+                // 5. Return mapped detail for frontend
+                var mapped = MapToOrderDetailResponse(orderDetail);
+                return Ok(mapped);
             }
             catch (Exception ex)
             {
@@ -178,5 +183,92 @@ namespace dotnet.Controllers
             }
         }
 
+        private static OrderDetailResponseDto MapToOrderDetailResponse(Order order)
+        {
+            var items = new List<OrderDetailItemDto>();
+            decimal total = 0;
+
+            foreach (var detail in order.orderdetails ?? Enumerable.Empty<OrderDetail>())
+            {
+                var quantity = detail.quantity == 0 ? 1 : detail.quantity;
+                var unitPrice = detail.variant?.price ?? 0;
+                var itemTotal = unitPrice * quantity;
+                total += itemTotal;
+
+                var product = detail.variant?.product;
+                var attributes = ExtractAttributes(detail.variant?.valuevariant);
+
+                items.Add(new OrderDetailItemDto
+                {
+                    Id = detail.id,
+                    VariantId = detail.variant_id,
+                    Quantity = quantity,
+                    UnitPrice = unitPrice,
+                    TotalPrice = itemTotal,
+                    CanReview = detail.canReview,
+                    Product = new OrderProductInfoDto
+                    {
+                        Name = product?.nameproduct ?? string.Empty,
+                        Thumbnail = product?.imageurls?.FirstOrDefault() ?? string.Empty,
+                        VariantAttributes = attributes
+                    }
+                });
+            }
+
+            var address = order.address;
+            var addressParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(address?.detail)) addressParts.Add(address!.detail!.Trim());
+            if (!string.IsNullOrWhiteSpace(address?.description)) addressParts.Add(address!.description!.Trim());
+            if (address?.codeward > 0) addressParts.Add(address.codeward.ToString());
+            addressParts.Add("Việt Nam");
+            var fullAddress = string.Join(", ", addressParts.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            return new OrderDetailResponseDto
+            {
+                OrderId = order.id,
+                OrderDate = order.orderdate,
+                StatusOrder = order.statusorder ?? string.Empty,
+                TypePay = order.typepay ?? string.Empty,
+                StatusPay = order.statuspay ?? string.Empty,
+                TotalPrice = total,
+                TotalDiscount = 0,
+                TotalPriceAfterDiscount = total,
+                AddressInfo = new OrderAddressInfoDto
+                {
+                    Title = address?.title ?? string.Empty,
+                    NameRecipient = address?.namerecipient ?? string.Empty,
+                    Tel = address?.tel ?? string.Empty,
+                    Detail = address?.detail ?? string.Empty,
+                    Description = address?.description ?? string.Empty,
+                    FullAddress = fullAddress
+                },
+                Items = items
+            };
+        }
+
+        private static Dictionary<string, string> ExtractAttributes(JsonDocument? document)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (document == null) return result;
+
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return result;
+
+            foreach (var property in root.EnumerateObject())
+            {
+                result[property.Name] = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                    JsonValueKind.Number => property.Value.TryGetDecimal(out var decVal)
+                        ? decVal.ToString("G")
+                        : property.Value.ToString(),
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    _ => property.Value.ToString()
+                };
+            }
+
+            return result;
+        }
     }
 }

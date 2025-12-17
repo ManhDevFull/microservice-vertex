@@ -7,7 +7,7 @@ using dotnet.Service.IService;
 namespace dotnet.Controllers
 {
     [ApiController]
-    [Route("[controller]")] // API sẽ là: http://localhost:5200/Address
+    [Route("[controller]")]
     [Authorize] // Yêu cầu đăng nhập
     public class AddressController : ControllerBase
     {
@@ -20,8 +20,6 @@ namespace dotnet.Controllers
             _logger = logger;
         }
 
-        // 1. Lấy danh sách địa chỉ của tôi
-        // GET: /Address/my-addresses
         [HttpGet("my-addresses")]
         public async Task<IActionResult> GetMyAddresses()
         {
@@ -43,8 +41,6 @@ namespace dotnet.Controllers
             }
         }
 
-        // 2. Thêm địa chỉ mới
-        // POST: /Address
         [HttpPost]
         public async Task<IActionResult> CreateAddress([FromBody] AddressCreateDTO dto)
         {
@@ -71,8 +67,6 @@ namespace dotnet.Controllers
             }
         }
 
-        // 3. Cập nhật địa chỉ
-        // PUT: /Address/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAddress(int id, [FromBody] AddressCreateDTO dto)
         {
@@ -90,23 +84,25 @@ namespace dotnet.Controllers
             try
             {
                 var updatedAddress = await _addressService.UpdateAddressAsync(userId, id, dto);
-                
+
                 if (updatedAddress == null)
                 {
-                    return NotFound(new { message = "Không tìm thấy địa chỉ hoặc bạn không có quyền sửa." });
+                    return NotFound(new { message = "Không tìm thấy địa chỉ hoặc không có quyền." });
                 }
 
                 return Ok(updatedAddress);
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi cập nhật địa chỉ ID {AddressId}", id);
-                return StatusCode(501, new { message = "Lỗi server khi cập nhật địa chỉ." });
+                return StatusCode(500, new { message = "Lỗi server khi cập nhật địa chỉ." });
             }
         }
 
-        // 4. Xóa địa chỉ
-        // DELETE: /Address/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAddress(int id)
         {
@@ -119,18 +115,22 @@ namespace dotnet.Controllers
             try
             {
                 var result = await _addressService.DeleteAddressAsync(userId, id);
-                
+
                 if (!result)
                 {
-                    return NotFound(new { message = "Không tìm thấy địa chỉ hoặc bạn không có quyền xóa." });
+                    return NotFound(new { message = "Không tìm thấy địa chỉ hoặc không có quyền." });
                 }
 
-                return Ok(new { message = "Xóa địa chỉ thành công." });
+                return Ok(new { message = "Đã ẩn địa chỉ thành công." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi xóa địa chỉ ID {AddressId}", id);
-                return StatusCode(500, new { message = "Lỗi server khi xóa địa chỉ." });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }
