@@ -414,9 +414,10 @@ namespace dotnet.Repository
 
     private static Order SanitizeOrder(Order order, IReadOnlyList<OrderDetail> details)
     {
+      var isDelivered = string.Equals(order.statusorder, "DELIVERED", StringComparison.OrdinalIgnoreCase);
       var safeDetails = details?
         .Where(d => d != null)
-        .Select(SanitizeOrderDetail)
+        .Select(d => SanitizeOrderDetail(d, isDelivered))
         .ToList() ?? new List<OrderDetail>();
 
       return new Order
@@ -435,17 +436,20 @@ namespace dotnet.Repository
       };
     }
 
-    private static OrderDetail SanitizeOrderDetail(OrderDetail detail)
+    private static OrderDetail SanitizeOrderDetail(OrderDetail detail, bool orderDelivered)
     {
       if (detail == null)
       {
         return new OrderDetail
         {
-          quantity = 0
+          quantity = 0,
+          canReview = false
         };
       }
 
       var quantity = detail.quantity == 0 ? 1 : detail.quantity;
+      var hasReview = detail.reviews != null && detail.reviews.Any();
+      var canReview = orderDelivered && !hasReview;
 
       return new OrderDetail
       {
@@ -453,7 +457,8 @@ namespace dotnet.Repository
         order_id = detail.order_id,
         variant_id = detail.variant_id,
         quantity = quantity,
-        variant = SanitizeVariant(detail.variant)
+        variant = SanitizeVariant(detail.variant),
+        canReview = canReview
       };
     }
 
@@ -704,6 +709,7 @@ namespace dotnet.Repository
       var details = await _connect.orderdetails
         .AsNoTracking()
         .Where(od => ids.Contains(od.order_id))
+        .Include(od => od.reviews)
         .Include(od => od.variant!)
           .ThenInclude(v => v.product)
         .OrderBy(od => od.id)

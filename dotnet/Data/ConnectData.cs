@@ -73,6 +73,7 @@ namespace be_dotnet_ecommerce1.Data
                 e.Property(x => x.detail).HasColumnName("detail");
                 e.Property(x => x.createdate).HasColumnName("createdate");
                 e.Property(x => x.updatedate).HasColumnName("updatedate");
+                e.Property(x => x.isdeleted).HasColumnName("is_deleted");
 
                 e.HasOne(x => x.account)
                     .WithMany(a => a.addresses)
