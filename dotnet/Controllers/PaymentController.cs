@@ -8,7 +8,7 @@ using dotnet.Dtos.Cart;
 namespace dotnet.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("payment")]
 public class PaymentController : ControllerBase
 {
     private readonly IServiceProvider _serviceProvider;

@@ -254,7 +254,7 @@ namespace PaymentService.Controllers
         }
 
         // POST /payment/manual-create-order/{orderId} - Trigger order creation when MoMo callback cannot reach localhost
-        [HttpPost("manual-create-order/{orderId}")]
+        [HttpPost("verify-and-confirm/{orderId}")]
         public async Task<IActionResult> ManualCreateOrder(string orderId)
         {
             try
