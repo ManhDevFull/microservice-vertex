@@ -5,7 +5,7 @@ using ShippingService.Data;
 namespace ShippingService.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("shipping")]
     public class ShippingController : ControllerBase
     {
         private readonly AppDbContext _db;

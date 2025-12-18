@@ -6,7 +6,7 @@ using ShippingService.Models;
 namespace ShippingService.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("shipping/payment")]
     public class PaymentController : ControllerBase
     {
         private readonly AppDbContext _db;
