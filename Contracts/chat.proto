@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+option csharp_namespace = "Chat.Grpc";
+
+package chat;
+
+service ChatGrpc {
+  rpc ListThreads (UserRequest) returns (ThreadListReply);
+  rpc ListMessages (ThreadRequest) returns (MessageListReply);
+  rpc MarkThreadRead (ThreadRequest) returns (MarkReadReply);
+}
+
+message UserRequest {
+  int32 userId = 1;
+}
+
+message ThreadRequest {
+  int32 userId = 1;
+  int32 contactId = 2;
+}
+
+message ThreadSummary {
+  int32 contactId = 1;
+  string name = 2;
+  string avatarInitials = 3;
+  int32 lastSenderId = 4;
+  string lastMessage = 5;
+  string lastTimestamp = 6;
+  int32 unreadCount = 7;
+  string contactEmail = 8;
+}
+
+message ThreadListReply {
+  repeated ThreadSummary threads = 1;
+}
+
+message ChatMessage {
+  int32 id = 1;
+  int32 senderId = 2;
+  int32 receiverId = 3;
+  string content = 4;
+  string timestamp = 5;
+  bool isRead = 6;
+}
+
+message MessageListReply {
+  repeated ChatMessage messages = 1;
+}
+
+message MarkReadReply {
+  int32 updated = 1;
+}
