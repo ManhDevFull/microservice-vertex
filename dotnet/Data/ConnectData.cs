@@ -1,6 +1,7 @@
 using be_dotnet_ecommerce1.Model;
 using dotnet.Dtos;
 using dotnet.Dtos.admin;
+using dotnet.Dtos.track_order;
 using dotnet.Model;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -38,6 +39,9 @@ namespace be_dotnet_ecommerce1.Data
         public DbSet<V_variant> v_Variants { get; set; }
         // v_category
         public DbSet<V_Category> v_Categories { get; set; }
+        //  dto
+        public DbSet<TrackOrderDTO> trackOrderDTOs { get; set; }
+        public DbSet<TimeLineDTO> timeLineDTOs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -324,6 +328,9 @@ namespace be_dotnet_ecommerce1.Data
                 entity.Property(p=>p.categoryId).HasColumnName("categoryid");
                 entity.Property(p=>p.categoryName).HasColumnName("categoryname");
                 entity.Property(p=>p.imgUrls).HasColumnName("imgurls");
+                entity.Property(p => p.categoryId).HasColumnName("categoryid");
+                entity.Property(p => p.categoryName).HasColumnName("categoryname");
+                entity.Property(p => p.imgUrls).HasColumnName("imgurls");
             });
             // view V_variant
             modelBuilder.Entity<V_variant>(entity =>

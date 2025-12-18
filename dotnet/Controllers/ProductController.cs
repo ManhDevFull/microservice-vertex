@@ -33,8 +33,8 @@ namespace dotnet.Controllers
             var rs = await _service.getProductsHaveDiscount();
             return Ok(rs);
         }
-        [HttpGet("frequently")]
-        public async Task<IActionResult> getFrequentlyProduct()
+        [HttpGet("frequently-index")]
+        public async Task<IActionResult> getFrequentlyIndexProduct()
         {
             var mainProductTask = await _service.getTop1ProductByOrder();
             var accompanyingTask = await _service.getProductFrequently();
@@ -47,6 +47,11 @@ namespace dotnet.Controllers
             };
             return Ok(result);
         }
+        // [HttpGet("frequently-grid/{id}")]
+        // public async Task<IActionResult> getFrequentlyGrid(int id)
+        // {
+        //     var rs = await _service.get
+        // }
         [HttpGet("detail-product/{id}")]
         public async Task<IActionResult> getDetail(int id)
         {

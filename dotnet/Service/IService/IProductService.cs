@@ -28,6 +28,7 @@ namespace be.Service.IService
     public Task<ProductAdminDTO?> GetProductAdminByIdAsync(int productId);
     public Task<ProductFilterDTO> getTop1ProductByOrder();
     public Task<ICollection<ProductFilterDTO>> getProductFrequently();
+    public Task<ICollection<ProductFilterDTO>> getProductFrequentlyGrid(int id);
   }
 
 }
